@@ -8,4 +8,5 @@ unless ARGV.length.eql? 1
 end
 
 home = Page.new(ARGV.first)
-puts home
+site = Site.new(home)
+puts site
