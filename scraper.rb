@@ -1,12 +1,15 @@
 #!/usr/bin/env ruby
-require 'shared.rb'
-include QmzScraperShared
+require 'rubygems'
+require 'uri'
+require 'pfd.rb'
+require 'page.rb'
+require 'site.rb'
 
 unless ARGV.length.eql? 1
-  print_help()
+  printf("Usage: %s uri_to_site_home_page\n", $0)
   exit
 end
 
 home = Page.new(ARGV.first)
 site = Site.new(home)
-puts site
+puts site.get_pfd
