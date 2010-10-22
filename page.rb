@@ -1,9 +1,10 @@
 require 'uri'
+require 'rubygems'
 require 'nokogiri'
 require 'open-uri'
 
 class Page
-  attr_reader :uri, :links
+  attr_reader :uri, :link_uris, :links
 
   def initialize(raw_uri)
     if raw_uri.is_a? String
@@ -13,11 +14,16 @@ class Page
     else
       raise ArgumentError, "Only URI and String instances are allowed for given URI"
     end
-    @links = Page.get_links(@uri)
+    @link_uris = Page.get_link_uris(@uri)
+    @links = []
   end
 
   def ==(other)
     other.is_a?(Page) && @uri == other.uri
+  end
+
+  def <=>(other)
+    @uri <=> other.uri
   end
 
   def eql?(other)
@@ -29,7 +35,20 @@ class Page
   end
 
   def to_s
-    sprintf("Page %s (%d links)", @uri.path, @links.length)
+    str = sprintf("Page %s (%d links)", @uri.path, @link_uris.length)
+    return str if @links.empty?
+    str << "\n"
+    str << @links.map do |link|
+      sprintf("\t\tLink: %s", link.to_s)
+    end.join("\n")
+    str
+  end
+
+  def to_tree_s
+    tree = sprintf("%s\n", @uri.path)
+    @links.each do |uri|
+      tree << sprintf("%s\n", @uri.path)
+    end
   end
 
   private
@@ -49,13 +68,13 @@ class Page
       uri
     end
 
-    def Page.get_links(root_uri)
+    def Page.get_link_uris(root_uri)
       target_host = root_uri.host
       doc = Nokogiri::HTML(open(root_uri.to_s))
       doc.css('a').collect do |link|
         get_uri_for_host(link['href'], root_uri)
       end.compact.select do |uri|
-        target_host.eql?(uri.host)
+        target_host == uri.host
       end.uniq
     end
 

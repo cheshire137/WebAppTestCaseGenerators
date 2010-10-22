@@ -33,6 +33,6 @@ class Flow
   end
 
   def to_s
-    sprintf("<%s> links to <%s>\n\tvia <%s>\n", @page1, @page2, @link)
+    sprintf("<%s>\n\tlinks to\n\t<%s>\n\tvia <%s>\n", @page1, @page2, @link)
   end
 end
