@@ -2,9 +2,17 @@
 # for the basis of this grammar.
 grammar ERBGrammar
   rule document
-    (text / erb_tag)* {
+    (text / erb_output_tag / erb_tag)* {
       def content
         elements.map { |e| e.content }
+      end
+    }
+  end
+ 
+  rule erb_output_tag
+    '<%=' [^%>]+ '%>' {
+      def content
+        [:erb_output_tag, elements[1].text_value]
       end
     }
   end
