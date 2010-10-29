@@ -1,7 +1,4 @@
-require 'rubygems'
-require 'treetop'
-require 'polyglot'
-require 'erb_grammar'
+require 'parser.rb'
 require 'pp'
 
 unless ARGV.length == 1
@@ -10,13 +7,6 @@ unless ARGV.length == 1
 end
 
 erb = IO.readlines(ARGV.first).join
-parser = ERBGrammarParser.new
+parser = Parser.new
 parse_result = parser.parse(erb)
-
-if parse_result.nil?
-  puts "Error:  could not parse the following ERB: "
-  puts erb
-  exit
-end
-
 pp parse_result.content

@@ -2,19 +2,11 @@
 # for the basis of this grammar.
 grammar ERBGrammar
   rule document
-    (erb_output_tag / erb_tag / newline / whitespace / text)* {
-      def content
-        elements.map(&:content)
-      end
-    }
+    (erb_output / erb / html_close_tag / html_open_tag / html_empty_tag / newline / whitespace / text)* <ERBDocument>
   end
  
-  rule erb_output_tag
-    erb_open_output_bracket ruby_code erb_close_bracket {
-      def content
-        [:erb_output_tag, elements.map(&:content)]
-      end
-    }
+  rule erb_output
+    erb_open_output_bracket ruby_code erb_close_bracket <ERBOutputTag>
   end
 
   rule erb_open_output_bracket
@@ -25,12 +17,8 @@ grammar ERBGrammar
     }
   end
 
-  rule erb_tag
-    erb_open_bracket ruby_code erb_close_bracket {
-      def content
-        [:erb_tag, elements.map(&:content)]
-      end
-    }
+  rule erb
+    erb_open_bracket ruby_code erb_close_bracket <ERBTag>
   end
 
   rule erb_open_bracket
@@ -58,15 +46,23 @@ grammar ERBGrammar
   end
 
   rule ruby_code
-    [^%>]+ {
+    whitespace? [^%>]* whitespace? {
       def content
         [:ruby_code, text_value]
       end
     }
   end
 
+  rule tab
+    "\t" {
+      def content
+        :tab
+      end
+    }
+  end
+
   rule whitespace
-    (' ' / newline)+ {
+    (newline / tab / [\s]) {
       def content
         :whitespace
       end
@@ -80,4 +76,48 @@ grammar ERBGrammar
       end
     }
   end
+
+  rule html_open_tag
+    "<" html_tag_name attribute_list ">" <HTMLOpenTag>
+  end
+
+  rule html_empty_tag
+    "<" html_tag_name attribute_list whitespace* "/>" <HTMLEmptyTag>
+  end
+
+  rule html_close_tag
+    "</" html_tag_name ">" <HTMLCloseTag>
+  end
+
+  rule html_tag_name
+    [A-Za-z0-9]+ {
+      def content
+        text_value
+      end
+    }
+  end
+
+  rule attribute_list
+    attribute* {
+      def content
+        elements.inject({}){ |hash, e| hash.merge(e.content) }
+      end
+    }
+  end
+
+  rule attribute
+    whitespace+ html_tag_name "=" quoted_value {
+      def content
+        {elements[1].content => elements[3].content}
+      end
+    }
+  end
+
+  rule quoted_value
+    ('"' [^"]* '"' / "'" [^']* "'") {
+      def content
+        elements[1].text_value
+      end
+    }
+  end  
 end
