@@ -2,25 +2,73 @@
 # for the basis of this grammar.
 grammar ERBGrammar
   rule document
-    (text / erb_output_tag / erb_tag)* {
+    (erb_output_tag / erb_tag / newline / whitespace / text)* {
       def content
-        elements.map { |e| e.content }
+        elements.map(&:content)
       end
     }
   end
  
   rule erb_output_tag
-    '<%=' [^%>]+ '%>' {
+    erb_open_output_bracket ruby_code erb_close_bracket {
       def content
-        [:erb_output_tag, elements[1].text_value]
+        [:erb_output_tag, elements.map(&:content)]
+      end
+    }
+  end
+
+  rule erb_open_output_bracket
+    '<%=' {
+      def content
+        :erb_open_output_bracket
       end
     }
   end
 
   rule erb_tag
-    '<%' [^%>]+ '%>' {
+    erb_open_bracket ruby_code erb_close_bracket {
       def content
-        [:erb_tag, elements[1].text_value]
+        [:erb_tag, elements.map(&:content)]
+      end
+    }
+  end
+
+  rule erb_open_bracket
+    '<%' {
+      def content
+        :erb_open_bracket
+      end
+    }
+  end
+
+  rule erb_close_bracket
+    '%>' {
+      def content
+        :erb_close_bracket
+      end
+    }
+  end
+
+  rule newline
+    [\n\r] {
+      def content
+        :newline
+      end
+    }
+  end
+
+  rule ruby_code
+    [^%>]+ {
+      def content
+        [:ruby_code, text_value]
+      end
+    }
+  end
+
+  rule whitespace
+    (' ' / newline)+ {
+      def content
+        :whitespace
       end
     }
   end
@@ -31,5 +79,5 @@ grammar ERBGrammar
         [:text, text_value]
       end
     }
-  end  
+  end
 end
