@@ -1,0 +1,11 @@
+# Thanks to http://github.com/threedaymonk/treetop-example/blob/master/complex_html.treetop
+# for the basis of this grammar.
+grammar ERBGrammar
+  rule erb_tag
+    '<%' [^%>]+ '%>' {
+      def content
+        [:erb_tag]
+      end
+    }
+  end
+end
