@@ -9,7 +9,7 @@ unless ARGV.length == 1
   exit
 end
 
-erb = "<% whee %>"
+erb = IO.readlines(ARGV.first).join
 parser = ERBGrammarParser.new
 parse_result = parser.parse(erb)
 
@@ -20,9 +20,3 @@ if parse_result.nil?
 end
 
 pp parse_result.content
-
-=begin
-erb = IO.readlines(ARGV.first).join
-parser = ERBGrammarParser.new
-parse_result = parser.parse(erb)
-=end
