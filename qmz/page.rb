@@ -35,12 +35,12 @@ class Page
   end
 
   def to_s
-    str = sprintf("Page %s (%d links)", @uri.path, @link_uris.length)
-    return str if @links.empty?
-    str << "\n"
-    str << @links.map do |link|
-      sprintf("\t\tLink: %s", link.to_s)
-    end.join("\n")
+    str = sprintf("Page %s (%d links", @uri.path, @link_uris.length)
+    unless @links.empty?
+      str << ': '
+      str << @links.map(&:to_s).join(', ')
+    end
+    str << ')'
     str
   end
 

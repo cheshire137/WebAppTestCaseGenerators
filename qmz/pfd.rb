@@ -3,9 +3,15 @@ require 'flow.rb'
 require 'link.rb'
 
 class PFD
-  attr_reader :pages, :links, :flows
+  attr_reader :pages, :links
 
-  def initialize(pages, links, flows)
+  def initialize(pages, links)
+    unless pages.respond_to? :each
+      raise ArgumentError, "Given pages arg must be enumerable"
+    end
+    unless links.respond_to? :each
+      raise ArgumentError, "Given links arg must be enumerable"
+    end
     pages.each do |page|
       unless page.is_a? Page
         raise ArgumentError, "Found a non-Page object in pages array"
@@ -16,21 +22,14 @@ class PFD
         raise ArgumentError, "Found a non-Link object in links array"
       end
     end
-    flows.each do |flow|
-      unless flow.is_a? Flow
-        raise ArgumentError, "Found a non-Flow object in flows array"
-      end
-    end
     @pages = pages
     @links = links
-    @flows = flows
   end
 
   def ==(other)
     return false unless other.is_a?(PFD)
     if @pages.length != other.pages.length ||
-       @links.length != other.links.length ||
-       @flows.length != other.flows.length
+       @links.length != other.links.length
       return false
     end
     @pages.each do |page|
@@ -44,12 +43,6 @@ class PFD
     end
     other.links.each do |link|
       return false unless @links.include?(link)
-    end
-    @flows.each do |flow|
-      return false unless other.flows.include?(flow)
-    end
-    other.flows.each do |flow|
-      return false unless @flows.include?(flow)
     end
     return true
   end
@@ -66,22 +59,16 @@ class PFD
     @links.each do |link|
       hash_code = hash_code ^ link.hash
     end
-    @flows.each do |flow|
-      hash_code = hash_code ^ flow.hash
-    end
     hash_code
   end
 
   def to_s
     pages_str = @pages.map(&:to_s).join("\n\t")
     links_str = @links.map(&:to_s).join("\n\t")
-    flows_str = @flows.map(&:to_s).join("\n\t")
-    sprintf("Pages (%d):\n\t%s\nLinks (%d):\n\t%s\nFlows (%d):\n\t%s\n",
+    sprintf("Pages (%d):\n\t%s\nLinks (%d):\n\t%s",
       @pages.length,
       pages_str,
       @links.length,
-      links_str,
-      @flows.length,
-      flows_str)
+      links_str)
   end
 end
