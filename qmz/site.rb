@@ -1,4 +1,3 @@
-require 'matrix'
 require 'page.rb'
 require 'link.rb'
 require 'pfd.rb'
@@ -11,7 +10,9 @@ class Site
       raise ArgumentError, "Given home page must be a Page instance"
     end
     @home = home_page
-    @pages = Site.get_pages(@home, [])
+    printf("Getting pages for site at %s...\n", @home.uri)
+    @pages = Site.get_pages(@home, [@home])
+    printf("Got %d pages for site at %s\n", @pages.length, @home.uri)
   end
 
   def get_pfd
@@ -21,7 +22,7 @@ class Site
       page1.link_uris.each do |uri|
         page2 = pages.find { |page| page.uri == uri }
         if page2.nil?
-          printf("ERR: cannot find page with URI %s in site\n", uri.path)
+          printf("ERR: cannot find page with URI %s in site\n", uri.request_uri)
           next
         end
         new_link = Link.new(page1.uri, uri, page2)
@@ -83,17 +84,24 @@ class Site
   def to_s
     sprintf("Pages in site rooted at %s:\n\t%s",
       @home.uri.to_s,
-      @pages.map(&:uri).map(&:path).join("\n\t"))
+      @pages.map(&:uri).map(&:request_uri).join("\n\t"))
   end
 
   private
     def Site.get_pages(root_page, pages)
-      existing_uris = pages.map(&:uri)
+      existing_uris = pages.collect do |page|
+        [page.uri.scheme, page.uri.host, page.uri.request_uri]
+      end
       new_pages = root_page.link_uris.select do |uri|
-        !existing_uris.include?(uri)
-      end.collect do |uri|
-        Page.new(uri)
-      end.uniq
+        # Compare scheme (e.g. http), host (e.g. google.com), and request_uri,
+        # which includes parameters such as ?query=whee but not #comments
+        !existing_uris.include?([uri.scheme, uri.host, uri.request_uri])
+      end.uniq.collect do |uri|
+        html = Page.open_uri(uri)
+        if !html.nil? && html.content_type == 'text/html'
+          Page.new(uri, html)
+        end
+      end.compact.uniq
       unless new_pages.empty?
         pages += new_pages
         new_pages.each do |page|

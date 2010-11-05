@@ -33,6 +33,6 @@ class Link
   end
 
   def to_s
-    sprintf("%s => %s", @uri1.path, @uri2.path)
+    sprintf("%s => %s", @uri1.request_uri, @uri2.request_uri)
   end
 end

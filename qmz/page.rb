@@ -1,13 +1,13 @@
-require 'uri'
 require 'rubygems'
 require 'nokogiri'
+require 'uri'
 require 'open-uri'
 
 class Page
   attr_reader :uri, :link_uris, :links
   attr_accessor :is_copy
 
-  def initialize(raw_uri)
+  def initialize(raw_uri, html=nil)
     if raw_uri.is_a? String
       @uri = URI.parse(raw_uri)
     elsif raw_uri.is_a? URI
@@ -15,7 +15,15 @@ class Page
     else
       raise ArgumentError, "Only URI and String instances are allowed for given URI"
     end
-    @link_uris = Page.get_link_uris(@uri)
+    if html.nil?
+      html = Page.open_uri(raw_uri)
+      if html.nil?
+        raise ArgumentError, "Could not open URI for page"
+      end
+    end
+    printf("Getting links for page %s...\n", @uri.request_uri)
+    @link_uris = Page.get_link_uris(@uri, html)
+    printf("\tGot %d links for page\n", @link_uris.length)
     @links = []
     @is_copy = false
   end
@@ -32,12 +40,23 @@ class Page
     self == other
   end
 
+  def Page.open_uri(uri)
+    begin
+      open(uri.to_s)
+    rescue OpenURI::HTTPError => err
+      uri_desc = uri.respond_to?(:request_uri) ? uri.request_uri : uri.to_s
+      printf("Got error '%s' trying to open URI %s, skipping...\n",
+        err.to_s, uri_desc)
+      nil
+    end
+  end
+
   def hash
     @uri.hash
   end
 
   def to_s
-    str = sprintf("Page %s (%d links", @uri.path, @link_uris.length)
+    str = sprintf("Page %s (%d links", @uri.request_uri, @link_uris.length)
     unless @links.empty?
       str << ': '
       str << @links.map(&:to_s).join(', ')
@@ -48,11 +67,16 @@ class Page
 
   private
     def Page.get_uri_for_host(str, host_uri)
+      if str.nil?
+        raise ArgumentError, "Cannot work with nil URI string"
+      end
       unless str.is_a? String
-        raise ArgumentError, "Given URI string must be a String"
+        raise ArgumentError,
+          "Given URI string must be a String, was given a(n) " + str.class.name
       end
       unless host_uri.is_a? URI
-        raise ArgumentError, "Given host must be a URI"
+        raise ArgumentError, "Given host must be a URI, was given a(n) " +
+          host_uri.class.name
       end
       uri = parse_uri_forgivingly(str)
       if !uri.nil? && uri.is_a?(URI::Generic) && uri.host.nil?
@@ -63,21 +87,27 @@ class Page
       uri
     end
 
-    def Page.get_link_uris(root_uri)
+    def Page.get_link_uris(root_uri, html)
       target_host = root_uri.host
-      doc = Nokogiri::HTML(open(root_uri.to_s))
+      doc = Nokogiri::HTML(html)
       hyperlink_uris = extract_uris_on_host(
-        doc.css('a').collect do |link|
+        doc.css('a').select do |link|
+          !link['href'].nil?
+        end.collect do |link|
           get_uri_for_host(link['href'], root_uri)
         end,
         target_host
       )
       button_uris = extract_uris_on_host(
         doc.css('form').select do |form|
-          input_types = form.css('input').collect do |input|
-            input['type']
-          end.map(&:downcase)
-          input_types.include?('submit') || input_types.include?('image')
+          if form['action'].nil?
+            false
+          else
+            input_types = form.css('input').collect do |input|
+              input['type']
+            end.map(&:downcase)
+            input_types.include?('submit') || input_types.include?('image')
+          end
         end.collect do |form|
           get_uri_for_host(form['action'], root_uri)
         end,

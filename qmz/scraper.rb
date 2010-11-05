@@ -11,11 +11,11 @@ end
 
 home = Page.new(ARGV.first)
 site = Site.new(home)
-puts site
+printf("%s\n\n", site.to_s)
 pfd = site.get_pfd
 ptt = Site.pfd2ptt(pfd)
 test_paths = ptt.get_test_paths
 puts "Test paths:"
 test_paths.each do |uris|
-  puts uris.map(&:path).join(" => ")
+  puts uris.map(&:request_uri).join(" => ")
 end
