@@ -11,7 +11,7 @@ class Site
       raise ArgumentError, "Given home page must be a Page instance"
     end
     @home = home_page
-    @pages = Site.get_pages(@home)
+    @pages = Site.get_pages(@home, [])
   end
 
   def get_pfd
@@ -20,7 +20,10 @@ class Site
     pages.each do |page1|
       page1.link_uris.each do |uri|
         page2 = pages.find { |page| page.uri == uri }
-        next if page2.nil?
+        if page2.nil?
+          printf("ERR: cannot find page with URI %s in site\n", uri.path)
+          next
+        end
         new_link = Link.new(page1.uri, uri, page2)
         page1.links << new_link
         links << new_link unless links.include? new_link
@@ -78,15 +81,26 @@ class Site
   end
 
   def to_s
-    nodes = [@home, @pages].flatten
-    nodes.map(&:to_s).join("\n")
+    sprintf("Pages in site rooted at %s:\n\t%s",
+      @home.uri.to_s,
+      @pages.map(&:uri).map(&:path).join("\n\t"))
   end
 
   private
-    def Site.get_pages(root_page)
-      root_page.link_uris.collect do |uri|
+    def Site.get_pages(root_page, pages)
+      existing_uris = pages.map(&:uri)
+      new_pages = root_page.link_uris.select do |uri|
+        !existing_uris.include?(uri)
+      end.collect do |uri|
         Page.new(uri)
       end.uniq
+      unless new_pages.empty?
+        pages += new_pages
+        new_pages.each do |page|
+          pages = get_pages(page, pages)
+        end
+      end
+      pages
     end
 end
 

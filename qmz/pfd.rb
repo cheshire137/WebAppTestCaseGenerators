@@ -87,7 +87,7 @@ class PFD
           raise ArgumentError, "Expected param 'level' to be a Fixnum"
         end
         printf("%s%d: %s\n",
-          ' ' * level,
+          '   ' * level,
           level,
           page.uri.path)
         if test_paths.last.length <= level

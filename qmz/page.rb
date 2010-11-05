@@ -46,13 +46,6 @@ class Page
     str
   end
 
-  def to_tree_s
-    tree = sprintf("%s\n", @uri.path)
-    @links.each do |uri|
-      tree << sprintf("%s\n", @uri.path)
-    end
-  end
-
   private
     def Page.get_uri_for_host(str, host_uri)
       unless str.is_a? String

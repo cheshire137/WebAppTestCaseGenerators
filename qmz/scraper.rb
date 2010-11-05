@@ -11,6 +11,7 @@ end
 
 home = Page.new(ARGV.first)
 site = Site.new(home)
+puts site
 pfd = site.get_pfd
 ptt = Site.pfd2ptt(pfd)
 test_paths = ptt.get_test_paths
