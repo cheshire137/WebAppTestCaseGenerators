@@ -5,6 +5,7 @@ require 'open-uri'
 
 class Page
   attr_reader :uri, :link_uris, :links
+  attr_accessor :is_copy
 
   def initialize(raw_uri)
     if raw_uri.is_a? String
@@ -16,6 +17,7 @@ class Page
     end
     @link_uris = Page.get_link_uris(@uri)
     @links = []
+    @is_copy = false
   end
 
   def ==(other)

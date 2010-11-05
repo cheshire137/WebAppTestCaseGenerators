@@ -60,6 +60,7 @@ class Site
           if first.include?(linked_page) || second.include?(linked_page)
             # Then generate their copies
             copy = linked_page.dup
+            copy.is_copy = true
             copies << copy
 
             # Retain the links between pid and the other pages (or their
@@ -81,29 +82,25 @@ class Site
       first.delete(next_page)
     end
     puts "Preorder of PTT:"
-    preorder(ptt.pages[0], copies, 0)
+    preorder(ptt.pages[0], 0)
     puts "---------------------------------"
     ptt
   end
 
-  def Site.preorder(page, copies, level)
+  def Site.preorder(page, level)
     unless page.is_a? Page
       raise ArgumentError, "Expected param 'page' to be of type Page"
-    end
-    unless copies.respond_to? :each
-      raise ArgumentError, "Expected param 'copies' to be enumerable"
     end
     unless level.is_a? Fixnum
       raise ArgumentError, "Expected param 'level' to be a Fixnum"
     end
-    is_copy = copies.include? page
     printf("%s%s (%s)\n",
       "\t" * level,
       page.uri,
-      is_copy ? 'copy' : 'not a copy')
-    unless is_copy
+      page.is_copy ? 'copy' : 'not a copy')
+    unless page.is_copy
       page.links.each do |link|
-        preorder(link.target_page, copies, level + 1)
+        preorder(link.target_page, level + 1)
       end
     end
   end  
