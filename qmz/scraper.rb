@@ -12,10 +12,9 @@ end
 home = Page.new(ARGV.first)
 site = Site.new(home)
 pfd = site.get_pfd
-puts "PFD:"
-puts pfd
-puts "---------------------------------"
 ptt = Site.pfd2ptt(pfd)
-puts "PTT:"
-puts ptt
-printf("PFD equal to PTT?: %s\n", (pfd == ptt) ? 'yes' : 'no')
+test_paths = ptt.get_test_paths
+puts "Test paths:"
+test_paths.each do |uris|
+  puts uris.map(&:path).join(" => ")
+end

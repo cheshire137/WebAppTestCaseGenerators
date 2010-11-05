@@ -31,7 +31,6 @@ class Site
 
   def Site.pfd2ptt(pfd)
     ptt = pfd.dup
-    copies = []
     first = []
     second = []
 
@@ -41,7 +40,6 @@ class Site
     while !first.empty?
       # Step 3
       next_page = first[0]
-      puts "FIRST not empty, got " + next_page.to_s
 
       # If pid is within SECOND, then go to (5). Otherwise, add it into the end
       # of SECOND
@@ -51,17 +49,12 @@ class Site
         # Step 4:  if pid is linking to other pages:
         next_page.links.each do |link|
           linked_page = link.target_page
-          printf("Looking at linked %s\n\tFIRST is [%s]\n\tSECOND is [%s]\n\n",
-            linked_page,
-            first.map(&:uri).map(&:path).join(", "),
-            second.map(&:uri).map(&:path).join(", "))
 
           # If some of the other page identifiers are within FIRST or SECOND:
           if first.include?(linked_page) || second.include?(linked_page)
             # Then generate their copies
             copy = linked_page.dup
             copy.is_copy = true
-            copies << copy
 
             # Retain the links between pid and the other pages (or their
             # copies) of the PFD
@@ -81,29 +74,8 @@ class Site
       # Step 5
       first.delete(next_page)
     end
-    puts "Preorder of PTT:"
-    preorder(ptt.pages[0], 0)
-    puts "---------------------------------"
     ptt
   end
-
-  def Site.preorder(page, level)
-    unless page.is_a? Page
-      raise ArgumentError, "Expected param 'page' to be of type Page"
-    end
-    unless level.is_a? Fixnum
-      raise ArgumentError, "Expected param 'level' to be a Fixnum"
-    end
-    printf("%s%s (%s)\n",
-      "\t" * level,
-      page.uri,
-      page.is_copy ? 'copy' : 'not a copy')
-    unless page.is_copy
-      page.links.each do |link|
-        preorder(link.target_page, level + 1)
-      end
-    end
-  end  
 
   def to_s
     nodes = [@home, @pages].flatten

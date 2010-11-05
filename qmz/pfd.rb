@@ -50,6 +50,10 @@ class PFD
     self == other
   end
 
+  def get_test_paths
+    preorder(@pages[0], 0, [[]])
+  end
+
   def hash
     hash_code = 1
     @pages.each do |page|
@@ -70,4 +74,31 @@ class PFD
       @links.length,
       links_str)
   end
+
+  private
+      def preorder(page, level, test_paths)
+        unless page.is_a? Page
+          raise ArgumentError, "Expected param 'page' to be of type Page"
+        end
+        unless level.is_a? Fixnum
+          raise ArgumentError, "Expected param 'level' to be a Fixnum"
+        end
+        printf("%s%d: %s\n",
+          ' ' * level,
+          level,
+          page.uri.path)
+        if test_paths.last.length <= level
+          test_paths.last << page.uri
+        else
+          new_path = test_paths.last.dup[0...level]
+          new_path << page.uri
+          test_paths << new_path
+        end
+        unless page.is_copy
+          page.links.each do |link|
+            preorder(link.target_page, level + 1, test_paths)
+          end
+        end
+        test_paths
+      end  
 end
