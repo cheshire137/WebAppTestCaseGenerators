@@ -1,11 +1,11 @@
 require 'rubygems'
 require 'nokogiri'
-require 'uri'
+require 'uri_extensions.rb'
 require 'open-uri'
 
 class Page
-  attr_reader :uri, :link_uris, :links
-  attr_accessor :is_copy
+  attr_reader :uri, :links
+  attr_accessor :is_copy, :link_uris
 
   def initialize(raw_uri, html=nil)
     if raw_uri.is_a? String
@@ -21,11 +21,10 @@ class Page
         raise ArgumentError, "Could not open URI for page"
       end
     end
-    printf("Getting links for page %s...\n", @uri.request_uri)
     @link_uris = Page.get_link_uris(@uri, html)
-    printf("\tGot %d links for page\n", @link_uris.length)
     @links = []
     @is_copy = false
+    printf("New %s\n", to_s)
   end
 
   def ==(other)

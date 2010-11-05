@@ -11,7 +11,7 @@ end
 
 home = Page.new(ARGV.first)
 site = Site.new(home)
-printf("%s\n\n", site.to_s)
+printf("\n%s\n\n", site.to_s)
 pfd = site.get_pfd
 ptt = Site.pfd2ptt(pfd)
 test_paths = ptt.get_test_paths

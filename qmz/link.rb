@@ -11,7 +11,7 @@ class Link
     unless target_page.is_a? Page
       raise ArgumentError, "Given target page must be of type Page"
     end
-    unless uri2 == target_page.uri
+    unless uri2.get_uniq_parts() == target_page.uri.get_uniq_parts()
       raise ArgumentError, "Given target page does not have same URI as given uri2"
     end
     @uri1 = uri1

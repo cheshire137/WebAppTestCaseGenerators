@@ -1,3 +1,4 @@
+require 'uri_extensions.rb'
 require 'page.rb'
 require 'link.rb'
 require 'pfd.rb'
@@ -20,7 +21,10 @@ class Site
     links = []
     pages.each do |page1|
       page1.link_uris.each do |uri|
-        page2 = pages.find { |page| page.uri == uri }
+        page2 = pages.find do |page|
+          # Compare scheme, host, and request_uri
+          page.uri.get_uniq_parts() == uri.get_uniq_parts()
+        end
         if page2.nil?
           printf("ERR: cannot find page with URI %s in site\n", uri.request_uri)
           next
@@ -88,24 +92,48 @@ class Site
   end
 
   private
-    def Site.get_pages(root_page, pages)
+    def Site.get_pages(root_page, pages, blacklist_uris=[])
       existing_uris = pages.collect do |page|
-        [page.uri.scheme, page.uri.host, page.uri.request_uri]
-      end
+        page.uri.get_uniq_parts()
+      end + blacklist_uris
+      uris_to_remove = []
       new_pages = root_page.link_uris.select do |uri|
         # Compare scheme (e.g. http), host (e.g. google.com), and request_uri,
         # which includes parameters such as ?query=whee but not #comments
-        !existing_uris.include?([uri.scheme, uri.host, uri.request_uri])
-      end.uniq.collect do |uri|
+        uri_desc = uri.get_uniq_parts()
+        if existing_uris.include?(uri_desc)
+          false
+        else
+          existing_uris << uri_desc
+          true
+        end
+      end.collect do |uri|
         html = Page.open_uri(uri)
         if !html.nil? && html.content_type == 'text/html'
           Page.new(uri, html)
+        else
+          uri_desc = uri.get_uniq_parts()
+          # Keep track of URIs that give us errors (404 not found, 405 method
+          # not allowed, etc.) or that aren't HTML pages, so we don't keep
+          # trying to open them
+          uris_to_remove << uri_desc
+          blacklist_uris << uri_desc
+          nil # Return nil so .compact gets rid of it
         end
-      end.compact.uniq
+      end.compact
+      unless uris_to_remove.empty?
+        root_page.link_uris.reject! do |uri|
+          uris_to_remove.include? uri.get_uniq_parts()
+        end
+      end
       unless new_pages.empty?
         pages += new_pages
+        num_new = new_pages.length
+        printf("Got %d new Page%s linked from %s\n", num_new,
+          num_new == 1 ? '' : 's', root_page.to_s)
         new_pages.each do |page|
-          pages = get_pages(page, pages)
+          printf('.')
+          pages = get_pages(page, pages, blacklist_uris)
         end
       end
       pages
