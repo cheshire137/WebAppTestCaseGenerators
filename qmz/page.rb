@@ -73,9 +73,28 @@ class Page
     def Page.get_link_uris(root_uri)
       target_host = root_uri.host
       doc = Nokogiri::HTML(open(root_uri.to_s))
-      doc.css('a').collect do |link|
-        get_uri_for_host(link['href'], root_uri)
-      end.compact.select do |uri|
+      hyperlink_uris = extract_uris_on_host(
+        doc.css('a').collect do |link|
+          get_uri_for_host(link['href'], root_uri)
+        end,
+        target_host
+      )
+      button_uris = extract_uris_on_host(
+        doc.css('form').select do |form|
+          input_types = form.css('input').collect do |input|
+            input['type']
+          end.map(&:downcase)
+          input_types.include?('submit') || input_types.include?('image')
+        end.collect do |form|
+          get_uri_for_host(form['action'], root_uri)
+        end,
+        target_host
+      )
+      (hyperlink_uris + button_uris).uniq
+    end
+
+    def Page.extract_uris_on_host(uris, target_host)
+      uris.compact.select do |uri|
         target_host == uri.host
       end.uniq
     end

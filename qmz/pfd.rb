@@ -51,7 +51,10 @@ class PFD
   end
 
   def get_test_paths
-    preorder(@pages[0], 0, [[]])
+    puts "Preorder traversal:"
+    test_paths = preorder(@pages[0], 0, [[]])
+    print "\n"
+    test_paths
   end
 
   def hash
