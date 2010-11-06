@@ -95,35 +95,34 @@ class Site
     def Site.get_pages(root_page, pages, blacklist_uris=[])
       existing_uris = pages.collect do |page|
         page.uri.get_uniq_parts()
-      end + blacklist_uris
-      uris_to_remove = []
-      new_pages = root_page.link_uris.select do |uri|
-        # Compare scheme (e.g. http), host (e.g. google.com), and request_uri,
-        # which includes parameters such as ?query=whee but not #comments
+      end
+      new_pages = []
+
+      # Don't use #each_with_index because we'll also be using #delete_at, and
+      # that does weird stuff to the iterator.
+      (root_page.link_uris.length-1).downto(0) do |i|
+        uri = root_page.link_uris[i]
         uri_desc = uri.get_uniq_parts()
-        if existing_uris.include?(uri_desc)
-          false
-        else
-          existing_uris << uri_desc
-          true
+        if blacklist_uris.include?(uri_desc)
+          # Current URI is already blacklisted, so remove it from this page
+          # and skip ahead
+          root_page.link_uris.delete_at(i)
+          next
+        elsif existing_uris.include?(uri_desc)
+          # Current URI is already represented by a Page, so no need to create
+          # another Page for it; skip ahead
+          next
         end
-      end.collect do |uri|
         html = Page.open_uri(uri)
         if !html.nil? && html.content_type == 'text/html'
-          Page.new(uri, html)
+          existing_uris << uri_desc
+          new_pages << Page.new(uri, html)
         else
-          uri_desc = uri.get_uniq_parts()
           # Keep track of URIs that give us errors (404 not found, 405 method
           # not allowed, etc.) or that aren't HTML pages, so we don't keep
           # trying to open them
-          uris_to_remove << uri_desc
           blacklist_uris << uri_desc
-          nil # Return nil so .compact gets rid of it
-        end
-      end.compact
-      unless uris_to_remove.empty?
-        root_page.link_uris.reject! do |uri|
-          uris_to_remove.include? uri.get_uniq_parts()
+          root_page.link_uris.delete_at(i)
         end
       end
       unless new_pages.empty?

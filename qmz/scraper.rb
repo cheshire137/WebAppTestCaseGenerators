@@ -3,46 +3,73 @@ require 'uri'
 require 'pfd.rb'
 require 'page.rb'
 require 'site.rb'
+require 'optparse'
 
-def print_usage(app_name)
-  printf("Usage: %s [uri_to_site_home_page] [file_to_load_or_save_site_structure]\n",
-    app_name)
-  printf("You must provide either a URI to the site's home page or the path to an\n" +
-    "existing file from which the site structure can be read.  If you provide\n" +
-    "the URI, it is optional that you provide a path; if the path is provided,\n" +
-    "it will be overwritten with the site structure taken from the given URI.\n")
+options = {}
+optparse = OptionParser.new do |opts|
+  opts.banner = sprintf("Usage: %s [options]", $0)
+  
+  options[:uri] = nil
+  opts.on('-u', '--uri URI', 'URI of site home page') do |uri|
+    options[:uri] = uri
+  end
+
+  options[:input_file] = nil
+  opts.on('-i', '--input FILE', 'YAML input file with site structure') do |file|
+    options[:input_file] = file
+  end
+
+  options[:output_file] = nil
+  opts.on('-o', '--output FILE', 'YAML site structure will be written here') do |file|
+    options[:output_file] = file
+  end
+
+  opts.on('-h', '--help', 'Display this screen') do
+    puts opts
+    exit
+  end
 end
 
-if ARGV.length < 1
-  print_usage($0)
+# Parse command-line parameters and remove all flag parameters from ARGV
+optparse.parse!
+
+if options[:uri] && options[:input_file]
+  printf("ERR: define only one of --uri, --input\n")
+  puts optparse
   exit
-elsif ARGV.length > 2
-  print_usage($0)
-  printf("WARN: ignoring last %d argument(s)\n", ARGV.length - 2)
+elsif options[:uri]
+  site = Site.new(Page.new(options[:uri]))
+elsif options[:input_file]
+  if File.exists? options[:input_file]
+    yaml = IO.readlines(options[:input_file]).join
+    site = YAML::load(yaml)
+    printf("Read site from file %s\n", options[:input_file])
+  else
+    printf("ERR: given input file %s does not exist\n", options[:input_file])
+    exit
+  end
+else
+  # Missing necessary params, print help and exit
+  puts optparse
+  exit
 end
 
-uri_or_path = ARGV.shift
-if File.exists? uri_or_path
-  yaml = IO.readlines(uri_or_path).join
-  site = YAML::load(yaml)
-  printf("Read site from file %s\n", uri_or_path)
-else
-  site = Site.new(Page.new(uri_or_path))
-end
 printf("\n%s\n", site.to_s)
-unless ARGV.empty?
-  path = ARGV.shift
-  printf("\nWriting site to %s...\n", path)
-  File.open(path, 'w') do |file|
+
+if options[:output_file]
+  printf("\nWriting site to %s...\n", options[:output_file])
+  File.open(options[:output_file], 'w') do |file|
     file.puts YAML::dump(site)
   end
   printf("File successfully written\n")
 end
+
 print "\n"
+
 pfd = site.get_pfd
 ptt = Site.pfd2ptt(pfd)
-test_paths = ptt.get_test_paths
+
 puts "Test paths:"
-test_paths.each do |uris|
+ptt.get_test_paths.each do |uris|
   puts uris.map(&:request_uri).join(" => ")
 end
