@@ -5,14 +5,15 @@ class Link
   attr_accessor :target_page
 
   def initialize(uri1, uri2, target_page)
-    unless uri1.is_a?(URI) && uri2.is_a?(URI)
-      raise ArgumentError, "Given URIs must be of type URI"
+    unless uri1.respond_to?(:get_uniq_parts) && uri2.respond_to?(:get_uniq_parts)
+      raise ArgumentError, "Given URIs must respond to .get_uniq_parts() method"
     end
-    unless target_page.is_a? Page
-      raise ArgumentError, "Given target page must be of type Page"
+    unless target_page.respond_to? :uri
+      raise ArgumentError, "Given target_page must have .uri property"
     end
     unless uri2.get_uniq_parts() == target_page.uri.get_uniq_parts()
-      raise ArgumentError, "Given target page does not have same URI as given uri2"
+      raise ArgumentError,
+        "Given target page does not have same URI as given uri2"
     end
     @uri1 = uri1
     @uri2 = uri2

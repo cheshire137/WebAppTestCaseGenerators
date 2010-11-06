@@ -20,8 +20,15 @@ optparse = OptionParser.new do |opts|
   end
 
   options[:output_file] = nil
-  opts.on('-o', '--output FILE', 'YAML site structure will be written here') do |file|
+  opts.on('-o', '--output FILE',
+    'YAML site structure will be written here') do |file|
     options[:output_file] = file
+  end
+
+  options[:test_paths_file] = nil
+  opts.on('-t', '--tests FILE',
+    'File in which generated test paths will be stored') do |file|
+    options[:test_paths_file] = file
   end
 
   opts.on('-h', '--help', 'Display this screen') do
@@ -34,7 +41,7 @@ end
 optparse.parse!
 
 if options[:uri] && options[:input_file]
-  printf("ERR: define only one of --uri, --input\n")
+  print "ERR: define only one of --uri, --input\n"
   puts optparse
   exit
 elsif options[:uri]
@@ -61,15 +68,26 @@ if options[:output_file]
   File.open(options[:output_file], 'w') do |file|
     file.puts YAML::dump(site)
   end
-  printf("File successfully written\n")
+  puts "File successfully written"
 end
 
 print "\n"
 
 pfd = site.get_pfd
 ptt = Site.pfd2ptt(pfd)
+test_paths = ptt.get_test_paths()
+
+if options[:test_paths_file] && !test_paths.empty?
+  printf("\nWriting test paths to %s...", options[:test_paths_file])
+  File.open(options[:test_paths_file], 'w') do |file|
+    test_paths.each do |uris|
+      file.puts uris.map(&:to_s).join(" => ")
+    end
+  end
+  print "File successfully written\n\n"
+end
 
 puts "Test paths:"
-ptt.get_test_paths.each do |uris|
+test_paths.each do |uris|
   puts uris.map(&:request_uri).join(" => ")
 end

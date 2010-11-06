@@ -11,16 +11,6 @@ class PFD
     unless links.respond_to? :each
       raise ArgumentError, "Given links arg must be enumerable"
     end
-    pages.each do |page|
-      unless page.is_a? Page
-        raise ArgumentError, "Found a non-Page object in pages array"
-      end
-    end
-    links.each do |link|
-      unless link.is_a? Link
-        raise ArgumentError, "Found a non-Link object in links array"
-      end
-    end
     @pages = pages
     @links = links
   end

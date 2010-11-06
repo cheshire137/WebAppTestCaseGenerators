@@ -4,8 +4,8 @@ require 'uri_extensions.rb'
 require 'open-uri'
 
 class Page
-  attr_reader :uri, :links
-  attr_accessor :is_copy, :link_uris
+  attr_reader :uri, :links, :uri_parts
+  attr_accessor :is_copy, :link_uris, :link_uri_parts
 
   def initialize(raw_uri, html=nil)
     if raw_uri.is_a? String
@@ -21,7 +21,9 @@ class Page
         raise ArgumentError, "Could not open URI for page"
       end
     end
+    @uri_parts = @uri.get_uniq_parts()
     @link_uris = Page.get_link_uris(@uri, html)
+    @link_uri_parts = @link_uris.map { |uri| uri.get_uniq_parts() }
     @links = []
     @is_copy = false
     printf("New %s\n", to_s)
@@ -35,8 +37,17 @@ class Page
     @uri <=> other.uri
   end
 
+  def delete_link_at(i)
+    @link_uris.delete_at(i)
+    @link_uri_parts.delete_at(i)
+  end
+
   def eql?(other)
     self == other
+  end
+
+  def hash
+    @uri.hash
   end
 
   def Page.open_uri(uri)
@@ -48,10 +59,6 @@ class Page
         err.to_s, uri_desc)
       nil
     end
-  end
-
-  def hash
-    @uri.hash
   end
 
   def to_s
@@ -85,6 +92,7 @@ class Page
       end
       uri
     end
+
 
     def Page.get_link_uris(root_uri, html)
       target_host = root_uri.host

@@ -17,13 +17,13 @@ class Site
   end
 
   def get_pfd
+    printf("Getting PFD for site %s...\n", @home.uri.to_s)
     pages = [@home, @pages].flatten.uniq
     links = []
     pages.each do |page1|
-      page1.link_uris.each do |uri|
+      page1.link_uris.each_with_index do |uri, i|
         page2 = pages.find do |page|
-          # Compare scheme, host, and request_uri
-          page.uri.get_uniq_parts() == uri.get_uniq_parts()
+          page.uri_parts == page1.link_uri_parts[i]
         end
         if page2.nil?
           printf("ERR: cannot find page with URI %s in site\n", uri.request_uri)
@@ -38,6 +38,7 @@ class Site
   end
 
   def Site.pfd2ptt(pfd)
+    puts "Converting PFD to PTT..."
     ptt = pfd.dup
     first = []
     second = []
@@ -93,20 +94,18 @@ class Site
 
   private
     def Site.get_pages(root_page, pages, blacklist_uris=[])
-      existing_uris = pages.collect do |page|
-        page.uri.get_uniq_parts()
-      end
+      existing_uris = pages.map(&:uri_parts)
       new_pages = []
 
       # Don't use #each_with_index because we'll also be using #delete_at, and
       # that does weird stuff to the iterator.
       (root_page.link_uris.length-1).downto(0) do |i|
         uri = root_page.link_uris[i]
-        uri_desc = uri.get_uniq_parts()
+        uri_desc = root_page.link_uri_parts[i]
         if blacklist_uris.include?(uri_desc)
           # Current URI is already blacklisted, so remove it from this page
           # and skip ahead
-          root_page.link_uris.delete_at(i)
+          root_page.delete_link_at(i)
           next
         elsif existing_uris.include?(uri_desc)
           # Current URI is already represented by a Page, so no need to create
@@ -122,7 +121,7 @@ class Site
           # not allowed, etc.) or that aren't HTML pages, so we don't keep
           # trying to open them
           blacklist_uris << uri_desc
-          root_page.link_uris.delete_at(i)
+          root_page.delete_link_at(i)
         end
       end
       unless new_pages.empty?
@@ -131,7 +130,7 @@ class Site
         printf("Got %d new Page%s linked from %s\n", num_new,
           num_new == 1 ? '' : 's', root_page.to_s)
         new_pages.each do |page|
-          printf('.')
+          print '.'
           pages = get_pages(page, pages, blacklist_uris)
         end
       end
