@@ -1,18 +1,24 @@
+require 'erb'
 require 'page.rb'
 require 'link.rb'
 
 class PFD
-  attr_reader :pages, :links
+  PFDTemplateFile = 'pfd_template.html.erb'.freeze
+  attr_reader :pages, :links, :root_uri
 
-  def initialize(pages, links)
+  def initialize(pages, links, root_uri)
     unless pages.respond_to? :each
       raise ArgumentError, "Given pages arg must be enumerable"
     end
     unless links.respond_to? :each
       raise ArgumentError, "Given links arg must be enumerable"
     end
+    unless root_uri.is_a? URI
+      raise ArgumentError, "Expected given root_uri to be of type URI"
+    end
     @pages = pages
     @links = links
+    @root_uri = root_uri
   end
 
   def ==(other)
@@ -55,6 +61,11 @@ class PFD
     hash_code
   end
 
+  def to_html
+    pfd_erb = ERB.new(IO.readlines(PFDTemplateFile).join, 0, "%<>")
+    pfd_erb.result(binding)
+  end
+
   def to_s
     pages_str = @pages.map(&:to_s).join("\n\t")
     links_str = @links.map(&:to_s).join("\n\t")
@@ -79,7 +90,6 @@ class PFD
         end
         unless page.is_copy
           page.links.each do |link|
-            print '.'
             preorder(link.target_page, level + 1, test_paths)
           end
         end

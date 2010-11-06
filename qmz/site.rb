@@ -34,7 +34,7 @@ class Site
         links << new_link unless links.include? new_link
       end
     end
-    PFD.new(pages, links)
+    PFD.new(pages, links, @home.uri)
   end
 
   def Site.pfd2ptt(pfd)

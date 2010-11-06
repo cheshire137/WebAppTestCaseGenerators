@@ -1,9 +1,9 @@
 #!/usr/bin/env ruby
 require 'uri'
+require 'optparse'
 require 'pfd.rb'
 require 'page.rb'
 require 'site.rb'
-require 'optparse'
 
 options = {}
 optparse = OptionParser.new do |opts|
@@ -23,6 +23,11 @@ optparse = OptionParser.new do |opts|
   opts.on('-o', '--output FILE',
     'YAML site structure will be written here') do |file|
     options[:output_file] = file
+  end
+
+  options[:ptt_file] = nil
+  opts.on('-p', '--ptt FILE', 'File where PTT will be saved') do |file|
+    options[:ptt_file] = file
   end
 
   options[:test_paths_file] = nil
@@ -49,8 +54,19 @@ elsif options[:uri]
 elsif options[:input_file]
   if File.exists? options[:input_file]
     yaml = IO.readlines(options[:input_file]).join
-    site = YAML::load(yaml)
-    printf("Read site from file %s\n", options[:input_file])
+    user_input = YAML::load(yaml)
+    if user_input.is_a? Site
+      site = user_input
+      printf("Read site from file %s\n", options[:input_file])
+    elsif user_input.is_a? PFD
+      site = nil
+      ptt = user_input
+      printf("Read PTT from file %s\n", options[:input_file])
+    else
+      printf("ERR: could not get a site or a PTT from the given input " +
+        "file: %s\n", options[:input_file])
+      exit
+    end
   else
     printf("ERR: given input file %s does not exist\n", options[:input_file])
     exit
@@ -61,24 +77,32 @@ else
   exit
 end
 
-printf("\n%s\n", site.to_s)
-
-if options[:output_file]
-  printf("\nWriting site to %s...\n", options[:output_file])
-  File.open(options[:output_file], 'w') do |file|
-    file.puts YAML::dump(site)
+unless site.nil?
+  printf("\n%s\n", site.to_s)
+  if options[:output_file]
+    printf("\nWriting site to %s...\n", options[:output_file])
+    File.open(options[:output_file], 'w') do |file|
+      file.puts YAML::dump(site)
+    end
+    puts "File successfully written"
   end
-  puts "File successfully written"
+  print "\n"
+  pfd = site.get_pfd()
+  ptt = Site.pfd2ptt(pfd)
 end
 
-print "\n"
+if options[:ptt_file] && !ptt.nil?
+  printf("\nWriting PTT to %s...\n", options[:ptt_file])
+  File.open(options[:ptt_file], 'w') do |file|
+    file.puts YAML::dump(ptt)
+  end
+  print "File successfully written\n\n"
+end
 
-pfd = site.get_pfd
-ptt = Site.pfd2ptt(pfd)
 test_paths = ptt.get_test_paths()
 
 if options[:test_paths_file] && !test_paths.empty?
-  printf("\nWriting test paths to %s...\n", options[:test_paths_file])
+  printf("Writing test paths to %s...\n", options[:test_paths_file])
   File.open(options[:test_paths_file], 'w') do |file|
     test_paths.each do |uris|
       file.puts uris.map(&:to_s).join(" => ")
@@ -87,7 +111,11 @@ if options[:test_paths_file] && !test_paths.empty?
   print "File successfully written\n\n"
 end
 
-puts "Test paths:"
-test_paths.each do |uris|
-  puts uris.map(&:request_uri).join(" => ")
+dir_name = site.home.uri_parts.join.gsub(/\//, '_')
+Dir.mkdir(dir_name)
+html_path = dir_name + '/index.html'
+printf("Writing HTML file with test paths to %s...\n", html_path)
+File.open(html_path, 'w') do |file|
+  file.puts ptt.to_html
 end
+puts "File successfully written"
