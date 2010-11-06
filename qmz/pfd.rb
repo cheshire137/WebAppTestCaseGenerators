@@ -41,10 +41,7 @@ class PFD
   end
 
   def get_test_paths
-    puts "Preorder traversal:"
-    test_paths = preorder(@pages[0], 0, [[]])
-    print "\n"
-    test_paths
+    preorder(@pages[0], 0, [[]])
   end
 
   def hash
@@ -70,25 +67,19 @@ class PFD
 
   private
       def preorder(page, level, test_paths)
-        unless page.is_a? Page
-          raise ArgumentError, "Expected param 'page' to be of type Page"
-        end
-        unless level.is_a? Fixnum
-          raise ArgumentError, "Expected param 'level' to be a Fixnum"
-        end
-        printf("%s%d: %s\n",
-          '   ' * level,
-          level,
-          page.uri.path)
         if test_paths.last.length <= level
+          # Based on level, still appending to the last test case
           test_paths.last << page.uri
         else
+          # Have finished concatenating test case, so start a new one based
+          # on the test case we just completed
           new_path = test_paths.last.dup[0...level]
           new_path << page.uri
           test_paths << new_path
         end
         unless page.is_copy
           page.links.each do |link|
+            print '.'
             preorder(link.target_page, level + 1, test_paths)
           end
         end

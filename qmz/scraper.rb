@@ -78,7 +78,7 @@ ptt = Site.pfd2ptt(pfd)
 test_paths = ptt.get_test_paths()
 
 if options[:test_paths_file] && !test_paths.empty?
-  printf("\nWriting test paths to %s...", options[:test_paths_file])
+  printf("\nWriting test paths to %s...\n", options[:test_paths_file])
   File.open(options[:test_paths_file], 'w') do |file|
     test_paths.each do |uris|
       file.puts uris.map(&:to_s).join(" => ")

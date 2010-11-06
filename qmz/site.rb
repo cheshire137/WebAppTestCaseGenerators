@@ -115,7 +115,9 @@ class Site
         html = Page.open_uri(uri)
         if !html.nil? && html.content_type == 'text/html'
           existing_uris << uri_desc
-          new_pages << Page.new(uri, html)
+          new_page = Page.new(uri, html)
+          new_pages << new_page
+          pages << new_page
         else
           # Keep track of URIs that give us errors (404 not found, 405 method
           # not allowed, etc.) or that aren't HTML pages, so we don't keep
@@ -125,13 +127,12 @@ class Site
         end
       end
       unless new_pages.empty?
-        pages += new_pages
         num_new = new_pages.length
         printf("Got %d new Page%s linked from %s\n", num_new,
           num_new == 1 ? '' : 's', root_page.to_s)
         new_pages.each do |page|
           print '.'
-          pages = get_pages(page, pages, blacklist_uris)
+          get_pages(page, pages, blacklist_uris)
         end
       end
       pages
