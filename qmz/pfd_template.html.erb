@@ -1,11 +1,27 @@
 <!DOCTYPE HTML>
 <html>
   <head>
-    <title>Test Cases for <%= root_uri %></title>
+    <title>Test Cases for <%= site_uri %></title>
+    <link rel="stylesheet" href="screen.css" media="screen">
   </head>
   <body>
     <header>
-      <h1>Test Cases for <%= root_uri %></h1>
+      <h1>Test Cases for <%= site_uri %></h1>
     </header>
+    <section>
+      <ol>
+        <% test_cases.each do |uris| %>
+          <li class="test-case">
+            <ol>
+              <% uris.each do |uri| %>
+                <li>
+                  <a href="<%= uri %>"><%= uri.request_uri %></a>
+                </li>
+              <% end %>
+            </ol>
+          </li>
+        <% end %>
+      </ol>
+    </section>
   </body>
 </html>

@@ -6,14 +6,34 @@ require 'pfd.rb'
 class Site
   attr_reader :pages, :home
 
-  def initialize(home_page)
+  def initialize(home_page, pages=[])
     unless home_page.is_a? Page
       raise ArgumentError, "Given home page must be a Page instance"
     end
     @home = home_page
-    printf("Getting pages for site at %s...\n", @home.uri)
-    @pages = Site.get_pages(@home, [@home])
-    printf("Got %d pages for site at %s\n", @pages.length, @home.uri)
+    if pages.empty?
+      printf("Getting pages for site at %s...\n", @home.uri)
+      @pages = Site.get_pages(@home, [@home])
+      printf("Got %d pages for site at %s\n", @pages.length, @home.uri)
+    else
+      @pages = pages
+    end
+  end
+
+  def Site.from_pfd(pfd)
+    unless pfd.is_a? PFD
+      raise ArgumentError, "Expected given pfd param to be of type PFD"
+    end
+    all_pages = pfd.pages
+    home_page_uri_desc = pfd.root_uri.get_uniq_parts()
+    home_page = all_pages.find do |page|
+      page.uri_parts == home_page_uri_desc
+    end
+    if home_page.nil?
+      raise "Cannot extract home page with URI " + pfd.root_uri.to_s +
+        " from pages in PFD"
+    end
+    Site.new(home_page, all_pages - [home_page])
   end
 
   def get_pfd

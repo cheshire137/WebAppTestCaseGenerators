@@ -14,11 +14,11 @@ class PFD
       raise ArgumentError, "Given links arg must be enumerable"
     end
     unless root_uri.is_a? URI
-      raise ArgumentError, "Expected given root_uri to be of type URI"
+      raise ArgumentError, "Given root_uri must be of type URI"
     end
+    @root_uri = root_uri
     @pages = pages
     @links = links
-    @root_uri = root_uri
   end
 
   def ==(other)
@@ -61,7 +61,7 @@ class PFD
     hash_code
   end
 
-  def to_html
+  def PFD.to_html(site_uri, test_cases)
     pfd_erb = ERB.new(IO.readlines(PFDTemplateFile).join, 0, "%<>")
     pfd_erb.result(binding)
   end

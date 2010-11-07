@@ -45,6 +45,7 @@ end
 # Parse command-line parameters and remove all flag parameters from ARGV
 optparse.parse!
 
+should_generate_ptt = true
 if options[:uri] && options[:input_file]
   print "ERR: define only one of --uri, --input\n"
   puts optparse
@@ -59,8 +60,9 @@ elsif options[:input_file]
       site = user_input
       printf("Read site from file %s\n", options[:input_file])
     elsif user_input.is_a? PFD
-      site = nil
       ptt = user_input
+      site = Site.from_pfd(ptt)
+      should_generate_ptt = false
       printf("Read PTT from file %s\n", options[:input_file])
     else
       printf("ERR: could not get a site or a PTT from the given input " +
@@ -77,16 +79,17 @@ else
   exit
 end
 
-unless site.nil?
-  printf("\n%s\n", site.to_s)
-  if options[:output_file]
-    printf("\nWriting site to %s...\n", options[:output_file])
-    File.open(options[:output_file], 'w') do |file|
-      file.puts YAML::dump(site)
-    end
-    puts "File successfully written"
+printf("\n%s\n", site.to_s)
+if options[:output_file]
+  printf("\nWriting site to %s...\n", options[:output_file])
+  File.open(options[:output_file], 'w') do |file|
+    file.puts YAML::dump(site)
   end
-  print "\n"
+  puts "File successfully written"
+end
+print "\n"
+
+if should_generate_ptt
   pfd = site.get_pfd()
   ptt = Site.pfd2ptt(pfd)
 end
@@ -111,11 +114,12 @@ if options[:test_paths_file] && !test_paths.empty?
   print "File successfully written\n\n"
 end
 
-dir_name = site.home.uri_parts.join.gsub(/\//, '_')
+dir_name = site.home.uri_parts.join('.').gsub(/\//, '_').chomp('_')
 Dir.mkdir(dir_name)
+FileUtils.copy('screen.css', dir_name)
 html_path = dir_name + '/index.html'
 printf("Writing HTML file with test paths to %s...\n", html_path)
 File.open(html_path, 'w') do |file|
-  file.puts ptt.to_html
+  file.puts PFD.to_html(site.home.uri, test_paths)
 end
 puts "File successfully written"
