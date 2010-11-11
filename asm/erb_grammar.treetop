@@ -2,11 +2,15 @@
 # for the basis of this grammar.
 grammar ERBGrammar
   rule document
-    (erb_output / erb / html_doctype / html_directive / html_close_tag / html_open_tag / html_self_closing_tag / newline / whitespace / text)* <ERBDocument>
+    whitespace node whitespace x:document? <ERBDocument>
+  end
+
+  rule node
+    erb_output / erb / html_doctype / html_directive / html_self_closing_tag / html_close_tag / html_open_tag / text
   end
  
   rule erb_output
-    erb_open_output_bracket ruby_code erb_close_bracket <ERBOutputTag>
+    erb_open_output_bracket whitespace ruby_code whitespace erb_close_bracket <ERBOutputTag>
   end
 
   rule erb_open_output_bracket
@@ -18,7 +22,7 @@ grammar ERBGrammar
   end
 
   rule erb
-    erb_open_bracket ruby_code erb_close_bracket <ERBTag>
+    erb_open_bracket whitespace ruby_code whitespace erb_close_bracket <ERBTag>
   end
 
   rule erb_open_bracket
@@ -46,11 +50,7 @@ grammar ERBGrammar
   end
 
   rule ruby_code
-    whitespace? [^%>]* whitespace? {
-      def content
-        [:ruby_code, text_value]
-      end
-    }
+    (('%' !'>') /  [^%])* <RubyCode>
   end
 
   rule tab
@@ -62,7 +62,7 @@ grammar ERBGrammar
   end
 
   rule whitespace
-    (newline / tab / [\s]) {
+    (newline / tab / [\s])* {
       def content
         :whitespace
       end
@@ -70,23 +70,29 @@ grammar ERBGrammar
   end
 
   rule text
-    [^<]+ {
+    (([<>] !(html_tag_name / [/%!])) / [^<>])+ {
       def content
-        [:text, text_value]
+        stripped = text_value.strip
+        [:text, if stripped.empty?
+          ""
+        else
+          #stripped.html_unescape.gsub(/\'/, "\\\\'")
+          stripped.gsub(/\'/, "\\\\'")
+        end]
       end
     }
   end
 
   rule html_open_tag
-    "<" html_tag_name attribute_list ">" <HTMLOpenTag>
+   '<' tag_name:html_tag_name attrs:html_tag_attributes? whitespace '>' <HTMLOpenTag>
   end
 
   rule html_self_closing_tag
-    '<' tag_name:html_tag_name attrs:attribute_list? whitespace '/>' <HTMLSelfClosingTag>
+    '<' tag_name:html_tag_name attrs:html_tag_attributes? whitespace '/>' <HTMLSelfClosingTag>
   end
 
   rule html_close_tag
-    "</" html_tag_name ">" <HTMLCloseTag>
+    "</" tag_name:html_tag_name ">" <HTMLCloseTag>
   end
 
   rule html_tag_name
@@ -108,32 +114,52 @@ grammar ERBGrammar
   rule html_directive
     '<!' [^>]* '>' {
       def content
-        line "rawtext '#{text_value}'"
+        [:html_directive, text_value]
       end
     }
   end
 
-  rule attribute_list
-    attribute* {
-      def content
-        elements.inject({}){ |hash, e| hash.merge(e.content) }
-      end
-    }
+  rule html_tag_attributes
+    head:html_tag_attribute tail:html_tag_attributes* <HTMLTagAttributes>
   end
 
-  rule attribute
-    whitespace+ html_tag_name "=" quoted_value {
-      def content
-        {elements[1].content => elements[3].content}
-      end
-    }
+  rule html_tag_attribute
+    whitespace n:(html_tag_name) whitespace '=' whitespace v:quoted_value whitespace <HTMLTagAttribute>
   end
 
   rule quoted_value
-    ('"' [^"]* '"' / "'" [^']* "'") {
+    (('"' val:([^"]*) '"') / ('\'' val:([^']*) '\'')) {
       def content
-        elements[1].text_value
+        val.text_value
+      end
+    
+      def convert
+        extract_erb(val.text_value)
+      end
+      
+      def parenthesize_if_necessary(s)
+        return s if s.strip =~ /^\(.*\)$/ || s =~ /^[A-Z0-9_]*$/i
+        "(" + s + ")"
+      end
+      
+      def extract_erb(s, parenthesize = true)
+        if s =~ /^(.*?)<%=(.*?)%>(.*?)$/
+          #pre, code, post = $1.html_unescape.escape_single_quotes, $2, $3.html_unescape.escape_single_quotes
+          pre, code, post = $1, $2, $3
+          out = ""
+          out = "'#{pre}' + " unless pre.length == 0
+          out += parenthesize_if_necessary(code.strip)
+          unless post.length == 0
+            post = extract_erb(post, false)
+            out += " + #{post}"
+          end
+          out = parenthesize_if_necessary(out) if parenthesize
+          out
+        else
+          #"'" + s.html_unescape.escape_single_quotes + "'"
+          "'" + s + "'"
+        end
       end
     }
-  end  
+  end
 end
