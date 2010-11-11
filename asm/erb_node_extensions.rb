@@ -23,6 +23,12 @@ module ERBGrammar
     end
   end
 
+  class HTMLTagPair < Treetop::Runtime::SyntaxNode
+    def content
+      [:html_tag_pair, elements.inspect]
+    end
+  end
+
   class HTMLOpenTag < Treetop::Runtime::SyntaxNode
     def content
       [:html_open_tag, elements[1].content, elements[2].content]
@@ -35,9 +41,9 @@ module ERBGrammar
     end
   end
 
-  class HTMLEmptyTag < Treetop::Runtime::SyntaxNode
+  class HTMLSelfClosingTag < Treetop::Runtime::SyntaxNode
     def content
-      [:html_empty_tag, elements[1].content, elements[2].content]
+      [:html_self_closing_tag, tag_name.text_value, attrs.empty? ? "" : attrs.content]
     end
   end
 end

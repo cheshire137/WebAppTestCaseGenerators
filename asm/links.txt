@@ -5,4 +5,8 @@ http://objectmix.com/ruby/744709-how-can-i-debug-treetop-grammar.html
 http://github.com/smtlaissezfaire/css_parser/tree/master/lib/css_parser/
 http://github.com/threedaymonk/treetop-example
 http://po-ru.com/diary/getting-started-with-treetop/
-
+http://www.igvita.com/2008/12/11/ruby-ast-for-fun-and-profit/
+https://github.com/seattlerb/ruby_parser
+http://groups.google.com/group/treetop-dev/browse_thread/thread/d623fb0fab06f9b2
+https://gist.github.com/670054
+/usr/local/lib/ruby/gems/1.8/gems/erector-0.8.1/lib/erector/erect/rhtml.treetop
