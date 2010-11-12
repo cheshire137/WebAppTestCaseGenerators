@@ -13,4 +13,5 @@ module ERBGrammar
   require File.join(base_path, 'html_quoted_value.rb')
   require File.join(base_path, 'ruby_code.rb')
   require File.join(base_path, 'text.rb')
+  require File.join(base_path, 'whitespace.rb')
 end

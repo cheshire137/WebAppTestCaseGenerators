@@ -1,22 +1,41 @@
 module ERBGrammar
   class ERBDocument < Treetop::Runtime::SyntaxNode
-    include Enumerable
-    def [](index)
-      each_with_index do |el, i|
-        return el if i == index
-      end
-      nil
-    end
-    def each
-      yield node
-      x.each { |other| yield other } unless x.nil? || !x.respond_to?(:each)
-    end
+	include Enumerable
+
+	def compress_content
+	  indices_consumed = []
+	  each_with_index do |element, i|
+		next unless element.respond_to? :index
+		if element.respond_to? :pair_match?
+		  unless indices_consumed.include? element.index
+			if element.respond_to?(:close) && !element.close.nil?
+			  # element is open tag
+			  range = element.index+1...element.close.index
+			  element.content = self[range]
+			  indices_consumed += range.to_a
+			  # Closing element is not part of the content, but it no longer
+			  # needs to appear as a separate element in the tree
+			  indices_consumed << element.close.index
+			end
+		  end
+		end
+		if indices_consumed.include? element.index
+		  delete_at(i)
+		end
+	  end
+	end
+
+	def each
+	  yield node
+	  if !x.nil? && x.respond_to?(:each)
+		x.each { |other| yield other }
+	  end
+	end
+
     def inspect
       to_s
     end
-    def length
-      1 + (x.respond_to?(:length) ? x.length : 0)
-    end
+
     def pair_tags
       mateless = []
       each_with_index do |element, i|
@@ -40,8 +59,9 @@ module ERBGrammar
         end
       end
     end
+
     def to_s
-      map(&:to_s).join("\n")
+	  map(&:to_s).select { |str| !str.blank? }.join("\n")
     end
   end
 end

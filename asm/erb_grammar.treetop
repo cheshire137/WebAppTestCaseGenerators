@@ -46,9 +46,7 @@ grammar ERBGrammar
   end
 
   rule whitespace
-    (newline / tab / [\s])* {
-      attr_accessor :index
-    }
+    (newline / tab / [\s])* <Whitespace>
   end
 
   rule text
@@ -94,6 +92,7 @@ grammar ERBGrammar
   rule quoted_value
     (('"' val:([^"]*) '"') / ('\'' val:([^']*) '\'')) {
       attr_accessor :index
+
       def convert
         extract_erb(val.text_value)
       end
@@ -118,6 +117,10 @@ grammar ERBGrammar
         else
           "'" + s + "'"
         end
+      end
+
+      def to_s
+        val.text_value
       end
     }
   end

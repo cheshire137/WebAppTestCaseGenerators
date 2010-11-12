@@ -1,6 +1,15 @@
 module ERBGrammar
-  # Thanks to https://github.com/aarongough/koi-reference-parser/blob/development/lib/parser/syntax_node_extensions.rb
   class Treetop::Runtime::SyntaxNode
+    include Enumerable
+
+	def each
+	  if nonterminal?
+		elements.each { |el| yield el }
+	  end
+	end
+
+	# Thanks to https://github.com/aarongough/koi-reference-parser/blob/
+	# development/lib/parser/syntax_node_extensions.rb
     def to_h
       hash = {}
       hash[:offset] = interval.first

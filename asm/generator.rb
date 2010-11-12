@@ -13,3 +13,5 @@ pp ast
 puts '----------------------------'
 ast.pair_tags
 pp ast
+#puts '----------------------------'
+#ast.compress_content
