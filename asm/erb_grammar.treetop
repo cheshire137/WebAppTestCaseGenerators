@@ -14,11 +14,7 @@ grammar ERBGrammar
   end
 
   rule erb_open_output_bracket
-    '<%=' {
-      def content
-        :erb_open_output_bracket
-      end
-    }
+    '<%='
   end
 
   rule erb
@@ -26,26 +22,16 @@ grammar ERBGrammar
   end
 
   rule erb_open_bracket
-    '<%' {
-      def content
-        :erb_open_bracket
-      end
-    }
+    '<%'
   end
 
   rule erb_close_bracket
-    '%>' {
-      def content
-        :erb_close_bracket
-      end
-    }
+    '%>'
   end
 
   rule newline
     [\n\r] {
-      def content
-        :newline
-      end
+      attr_accessor :index
     }
   end
 
@@ -55,22 +41,19 @@ grammar ERBGrammar
 
   rule tab
     "\t" {
-      def content
-        :tab
-      end
+      attr_accessor :index
     }
   end
 
   rule whitespace
     (newline / tab / [\s])* {
-      def content
-        :whitespace
-      end
+      attr_accessor :index
     }
   end
 
   rule text
     (([<>] !(html_tag_name / [/%!])) / [^<>])+ {
+      attr_accessor :index
       def to_s
         stripped = text_value.strip
         if stripped.empty?
@@ -101,17 +84,13 @@ grammar ERBGrammar
 
   rule html_doctype
     '<!DOCTYPE' [^>]* '>' {
-      def content
-        line "rawtext '#{text_value}'"
-      end
+      attr_accessor :index
     }
   end
   
   rule html_directive
     '<!' [^>]* '>' {
-      def content
-        [:html_directive, text_value]
-      end
+      attr_accessor :index
     }
   end
 
@@ -125,6 +104,7 @@ grammar ERBGrammar
 
   rule quoted_value
     (('"' val:([^"]*) '"') / ('\'' val:([^']*) '\'')) {
+      attr_accessor :index
       def convert
         extract_erb(val.text_value)
       end

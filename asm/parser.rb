@@ -17,22 +17,4 @@ class Parser
     end
     tree
   end
-
-  def pair_tags(tree)
-	mateless = []
-	pairs = []
-	printf("%d nodes:\n", tree.length)
-	tree.each_with_index do |element, i|
-	  printf("%d: %s\n", i, element)
-	  next unless element.respond_to?(:pair_match?)
-	  mate = mateless.find { |el| el.pair_match?(element) }
-	  if mate.nil?
-		mateless << element
-	  else
-		pairs << [mate, element]
-	  end
-	end
-	puts "----------"
-	puts pairs.map(&:inspect).join("\n")
-  end
 end

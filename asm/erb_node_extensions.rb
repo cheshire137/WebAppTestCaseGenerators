@@ -2,6 +2,13 @@ module ERBGrammar
   Tab = '  '
 
   class ERBDocument < Treetop::Runtime::SyntaxNode
+    include Enumerable
+    def [](index)
+      each_with_index do |el, i|
+        return el if i == index
+      end
+      nil
+    end
     def each
       yield node
       unless x.empty? || !x.respond_to?(:each)
@@ -10,31 +17,42 @@ module ERBGrammar
         end
       end
     end
-    def each_with_index
-      i = 0
-      each do |node|
-        yield node, i
-        i += 1
-      end
-    end
     def inspect
       to_s
     end
     def length
       1 + (x.respond_to?(:length) ? x.length : 0)
     end
-    def to_s(indent_level=0)
-      str = Tab * indent_level
-      str << if x.empty?
-        node.to_s(indent_level)
-      else
-        sprintf("%s\n%s", node.to_s, x.to_s(indent_level))
+    def pair_tags
+      mateless = []
+      each_with_index do |element, i|
+        next unless element.respond_to? :index
+        element.index = i
+        next unless element.respond_to? :pair_match?
+        # Find first matching mate for this element in the array of mateless
+        # elements.  First matching mate will be latest added element.
+        mate = mateless.find { |el| el.pair_match?(element) }
+        if mate.nil?
+          # Add mate to beginning of mateless array, so array is sorted by
+          # most-recently-found to earliest-found.
+          mateless.insert(0, element)
+        else
+          if mate.respond_to? :close
+            mate.close = element
+            mateless.delete(mate)
+          else
+            raise "Mate found out of order: " + mate.to_s + ", " + element.to_s
+          end
+        end
       end
-      str
+    end
+    def to_s
+      map(&:to_s).join("\n")
     end
   end
 
   class ERBOutputTag < Treetop::Runtime::SyntaxNode
+    attr_accessor :index
     def eql?(other)
       return false unless other.is_a?(self.class)
       code == other.code
@@ -54,6 +72,7 @@ module ERBGrammar
   end
 
   class ERBTag < Treetop::Runtime::SyntaxNode
+    attr_accessor :index
     def eql?(other)
       return false unless other.is_a?(self.class)
       code == other.code
@@ -73,6 +92,7 @@ module ERBGrammar
   end
 
   class HTMLOpenTag < Treetop::Runtime::SyntaxNode
+    attr_accessor :index, :content, :close
     def attributes_str
       attrs.empty? ? '' : attrs.to_s
     end
@@ -87,17 +107,25 @@ module ERBGrammar
       tag_name.text_value
     end
     def inspect
-      sprintf("%s: %s %s", self.class, name, attributes_str)
+      sprintf("%s %d: %s %s", self.class, @index, name, attributes_str)
     end
     def pair_match?(other)
       other.is_a?(HTMLCloseTag) && name == other.name
     end
     def to_s(indent_level=0)
-      Tab * indent_level + name + ' ' + attributes_str
+      str = sprintf("%s%s %s", Tab * indent_level, name, attributes_str)
+      unless @content.nil?
+        str << sprintf("\n--%s%s", Tab * (indent_level + 1), @content)
+      end
+      unless @close.nil?
+        str << sprintf("\n--%s%s", Tab * indent_level, @close)
+      end
+      str
     end
   end
 
   class HTMLCloseTag < Treetop::Runtime::SyntaxNode
+    attr_accessor :index
     def eql?(other)
       return false unless other.is_a?(self.class)
       name == other.name
@@ -109,7 +137,7 @@ module ERBGrammar
       tag_name.text_value
     end
     def inspect
-      sprintf("%s: %s", self.class, name)
+      sprintf("%s %d: %s", self.class, @index, name)
     end
     def pair_match?(other)
       other.is_a?(HTMLOpenTag) && name == other.name
@@ -120,6 +148,7 @@ module ERBGrammar
   end
 
   class HTMLSelfClosingTag < Treetop::Runtime::SyntaxNode
+    attr_accessor :index
     def attributes_str
       attrs.empty? ? '' : attrs.to_s
     end
@@ -142,6 +171,7 @@ module ERBGrammar
   end
 
   class HTMLTagAttributes < Treetop::Runtime::SyntaxNode
+    attr_accessor :index
     def eql?(other)
       return false unless other.is_a?(self.class)
       this_arr = to_a
@@ -179,6 +209,7 @@ module ERBGrammar
   end
 
   class HTMLTagAttribute < Treetop::Runtime::SyntaxNode
+    attr_accessor :index
     def eql?(other)
       return false unless other.is_a?(self.class)
       name == other.name && value == other.value
@@ -201,6 +232,7 @@ module ERBGrammar
   end
 
   class HTMLQuotedValue < Treetop::Runtime::SyntaxNode
+    attr_accessor :index
     def eql?(other)
       return false unless other.is_a?(self.class)
       value == other.value
@@ -245,6 +277,7 @@ module ERBGrammar
   end
 
   class RubyCode < Treetop::Runtime::SyntaxNode
+    attr_accessor :index
     def eql?(other)
       return false unless other.is_a?(self.class)
       content_removing_trims == other.content_removing_trims
