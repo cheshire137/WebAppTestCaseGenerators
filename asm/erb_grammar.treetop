@@ -1,4 +1,5 @@
-# Thanks to http://github.com/threedaymonk/treetop-example/blob/master/complex_html.treetop
+# Thanks to http://erector.rubyforge.org/ for their RHTML.treetop and
+# http://github.com/threedaymonk/treetop-example/blob/master/complex_html.treetop
 # for the basis of this grammar.
 grammar ERBGrammar
   rule document
@@ -10,19 +11,11 @@ grammar ERBGrammar
   end
  
   rule erb_output
-    erb_open_output_bracket whitespace code:ruby_code whitespace erb_close_bracket <ERBOutputTag>
-  end
-
-  rule erb_open_output_bracket
-    '<%='
+    '<%=' whitespace code:ruby_code whitespace erb_close_bracket <ERBOutputTag>
   end
 
   rule erb
-    erb_open_bracket whitespace code:ruby_code whitespace erb_close_bracket <ERBTag>
-  end
-
-  rule erb_open_bracket
-    '<%'
+    '<%' whitespace code:ruby_code whitespace erb_close_bracket <ERBTag>
   end
 
   rule erb_close_bracket

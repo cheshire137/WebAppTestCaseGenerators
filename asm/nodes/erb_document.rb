@@ -2,6 +2,22 @@ module ERBGrammar
   class ERBDocument < Treetop::Runtime::SyntaxNode
 	include Enumerable
 
+	def [](obj)
+	  if obj.is_a?(Fixnum)
+		each_with_index do |el, i|
+		  return el if el.index == obj || i == obj
+		end
+	  elsif obj.is_a?(Range)
+		i = 0
+		select do |el|
+		  result = obj.include?(el.index) || obj.include?(i)
+		  i += 1
+		  result
+		end
+	  end
+	  nil
+	end
+
 	def compress_content
 	  indices_consumed = []
 	  each_with_index do |element, i|
@@ -25,6 +41,36 @@ module ERBGrammar
 	  end
 	end
 
+	def delete_at(index)
+	  unless index.is_a?(Fixnum)
+		raise ArgumentError, "Given index must be a Fixnum"
+	  end
+	  len = length
+	  if index < 0 || index >= length
+		raise ArgumentError, sprintf("Given index %d is invalid--must be between 0 <= index < %d", len)
+	  end
+	  obj = self[index]
+	  if node.index == index || 0 == index
+		if x.nil? || x.empty?
+		  node = nil
+		else
+		  node = x.shift
+		end
+	  else
+		i = 0
+		x = x.collect do |el|
+		  result = if el.index == index || i == index
+			nil
+		  else
+			el
+		  end
+		  i += 1
+		  result
+		end.compact
+	  end
+	  obj
+	end
+
 	def each
 	  yield node
 	  if !x.nil? && x.respond_to?(:each)
@@ -35,6 +81,10 @@ module ERBGrammar
     def inspect
       to_s
     end
+
+	def length
+	  1 + (x.respond_to?(:length) ? x.length : 0)
+	end
 
     def pair_tags
       mateless = []

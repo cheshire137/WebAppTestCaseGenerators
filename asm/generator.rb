@@ -9,9 +9,9 @@ end
 erb = IO.readlines(ARGV.first).join
 parser = Parser.new
 ast = parser.parse(erb)
+ast.pair_tags
+printf("Tree with %d nodes:\n", ast.length)
 pp ast
 puts '----------------------------'
-ast.pair_tags
+ast.compress_content
 pp ast
-#puts '----------------------------'
-#ast.compress_content

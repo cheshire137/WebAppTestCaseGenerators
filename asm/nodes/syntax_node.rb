@@ -8,6 +8,10 @@ module ERBGrammar
 	  end
 	end
 
+	def length
+	  nonterminal? ? elements.length : 0
+	end
+
 	# Thanks to https://github.com/aarongough/koi-reference-parser/blob/
 	# development/lib/parser/syntax_node_extensions.rb
     def to_h
