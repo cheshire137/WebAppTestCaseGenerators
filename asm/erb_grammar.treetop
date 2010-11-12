@@ -10,7 +10,7 @@ grammar ERBGrammar
   end
  
   rule erb_output
-    erb_open_output_bracket whitespace ruby_code whitespace erb_close_bracket <ERBOutputTag>
+    erb_open_output_bracket whitespace code:ruby_code whitespace erb_close_bracket <ERBOutputTag>
   end
 
   rule erb_open_output_bracket
@@ -22,7 +22,7 @@ grammar ERBGrammar
   end
 
   rule erb
-    erb_open_bracket whitespace ruby_code whitespace erb_close_bracket <ERBTag>
+    erb_open_bracket whitespace code:ruby_code whitespace erb_close_bracket <ERBTag>
   end
 
   rule erb_open_bracket
@@ -71,14 +71,14 @@ grammar ERBGrammar
 
   rule text
     (([<>] !(html_tag_name / [/%!])) / [^<>])+ {
-      def content
+      def to_s
         stripped = text_value.strip
-        [:text, if stripped.empty?
+        if stripped.empty?
           ""
         else
           #stripped.html_unescape.gsub(/\'/, "\\\\'")
           stripped.gsub(/\'/, "\\\\'")
-        end]
+        end
       end
     }
   end
@@ -96,11 +96,7 @@ grammar ERBGrammar
   end
 
   rule html_tag_name
-    [A-Za-z0-9_:-]+ {
-      def content
-        text_value
-      end
-    }
+    [A-Za-z0-9_:-]+
   end
 
   rule html_doctype
@@ -129,10 +125,6 @@ grammar ERBGrammar
 
   rule quoted_value
     (('"' val:([^"]*) '"') / ('\'' val:([^']*) '\'')) {
-      def content
-        val.text_value
-      end
-    
       def convert
         extract_erb(val.text_value)
       end

@@ -1,78 +1,140 @@
 module ERBGrammar
+  Tab = '  '
+
   class ERBDocument < Treetop::Runtime::SyntaxNode
-    def content
-      if x.empty?
-        [node.content]
+    def inspect
+      to_s
+    end
+    def to_s(indent_level=0)
+      str = Tab * indent_level
+      str << if x.empty?
+        node.to_s(indent_level)
       else
-        [node.content] + x.content
+        sprintf("%s\n%s", node.to_s, x.to_s(indent_level))
       end
+      str
     end
   end
 
   class ERBOutputTag < Treetop::Runtime::SyntaxNode
-    def content
-      [:erb_output, ruby_code.content_removing_trims]
+    def inspect
+      sprintf("%s: %s", self.class, ruby_code)
+    end
+    def ruby_code
+      code.content_removing_trims
+    end
+    def to_s(indent_level=0)
+      Tab * indent_level + ruby_code
     end
   end
 
   class ERBTag < Treetop::Runtime::SyntaxNode
-    def content
-      [:erb, ruby_code.text_value_removing_trims.strip]
+    def inspect
+      sprintf("%s: %s", self.class, ruby_code)
+    end
+    def ruby_code
+      code.text_value_removing_trims.strip
+    end
+    def to_s(indent_level=0)
+      Tab * indent_level + ruby_code
     end
   end
 
   class HTMLOpenTag < Treetop::Runtime::SyntaxNode
-    def content
-      [:html_open_tag, tag_name.content, attrs.empty? ? "" : attrs.content]
+    def attributes_str
+      attrs.empty? ? '' : attrs.to_s
+    end
+    def name
+      tag_name.text_value
+    end
+    def inspect
+      sprintf("%s: %s %s", self.class, name, attributes_str)
+    end
+    def to_s(indent_level=0)
+      Tab * indent_level + name + ' ' + attributes_str
     end
   end
 
   class HTMLCloseTag < Treetop::Runtime::SyntaxNode
-    def content
-      [:html_close_tag, tag_name.content]
+    def name
+      tag_name.text_value
+    end
+    def inspect
+      sprintf("%s: %s", self.class, name)
+    end
+    def to_s(indent_level=0)
+      sprintf("%s/%s", Tab * indent_level, name)
     end
   end
 
   class HTMLSelfClosingTag < Treetop::Runtime::SyntaxNode
-    def content
-      [:html_self_closing_tag, tag_name.content, attrs.empty? ? "" : attrs.content]
+    def attributes_str
+      attrs.empty? ? '' : attrs.to_s
+    end
+    def name
+      tag_name.text_value
+    end
+    def inspect
+      sprintf("%s: %s %s", self.class, name, attributes_str)
+    end
+    def to_s(indent_level=0)
+      Tab * indent_level + sprintf("%s %s", name, attributes_str)
     end
   end
 
   class HTMLTagAttributes < Treetop::Runtime::SyntaxNode
-    def content
-      [:html_tag_attributes, [head.content] + (tail.empty? ? [] : tail.elements.first.content.last)]
+    def to_a
+      arr = [head]
+      unless tail.empty?
+        arr += tail.elements.first.to_a
+      end
+      arr
+    end
+    def to_h
+      hash = {}
+      hash[head.name] = head.value
+      unless tail.empty?
+        hash.merge!(tail.elements.first.to_h)
+      end
+      hash
+    end
+    def to_s
+      to_a.map(&:to_s).join(', ')
     end
   end
 
   class HTMLTagAttribute < Treetop::Runtime::SyntaxNode
-    def attr_name
+    def name
       (n.text_value =~ /[-:]/) ? "'#{n.text_value}'" : ":#{n.text_value}"
     end
-
-    def content
-      [:html_tag_attribute, attr_name, v.content]
+    def value
+      v.text_value
     end
-
-    def to_s
-      "#{attr_name} => #{v.content}"
+    def inspect
+      sprintf("%s: %s => %s", self.class, name, value)
+    end
+    def to_s(indent_level=0)
+      Tab * indent_level + sprintf("%s => %s", name, value)
     end
   end
 
   class HTMLQuotedValue < Treetop::Runtime::SyntaxNode
-    def content
-      [:quoted_value, val.text_value]
+    def inspect
+      sprintf("%s: %s", self.class, value)
     end
-  
+    def to_s(indent_level=0)
+      Tab * indent_level + value
+    end
+    def value
+      val.text_value
+    end
     def convert
       extract_erb(val.text_value)
     end
-    
     def parenthesize_if_necessary(s)
       return s if s.strip =~ /^\(.*\)$/ || s =~ /^[A-Z0-9_]*$/i
       "(" + s + ")"
     end
-    
     def extract_erb(s, parenthesize = true)
       if s =~ /^(.*?)<%=(.*?)%>(.*?)$/
         #pre, code, post = $1.html_unescape.escape_single_quotes, $2, $3.html_unescape.escape_single_quotes
@@ -97,19 +159,16 @@ module ERBGrammar
     def content_removing_trims
       result.gsub(/\s*\-\s*$/, '')
     end
-    
     def text_value_removing_trims
       text_value.gsub(/\s*\-\s*$/, '')
     end
-    
-    def content
-      [:ruby_code, result]
-    end
-
     def result
       code = text_value.strip
       # matches a word, followed by either a word, a string, or a symbol
       code.gsub(/^(\w+) ([\w:"'].*)$/, '\1(\2)')
+    end
+    def to_s(indent_level=0)
+      Tab * indent_level + result
     end
   end
 end

@@ -9,4 +9,4 @@ end
 erb = IO.readlines(ARGV.first).join
 parser = Parser.new
 parse_result = parser.parse(erb)
-pp parse_result.content
+pp parse_result
