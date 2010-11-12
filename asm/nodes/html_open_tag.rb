@@ -2,6 +2,10 @@ module ERBGrammar
   class HTMLOpenTag < Treetop::Runtime::SyntaxNode
     attr_accessor :index, :content, :close
 
+	def attributes
+	  attrs.empty? ? [] : attrs.to_a
+	end
+
     def attributes_str
       attrs.empty? ? '' : attrs.to_s
     end

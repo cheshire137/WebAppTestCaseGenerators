@@ -82,6 +82,7 @@ module ERBGrammar
       to_s
     end
 
+	# Returns the number of HTML, ERB, and text nodes in this document
 	def length
 	  1 + (x.respond_to?(:length) ? x.length : 0)
 	end

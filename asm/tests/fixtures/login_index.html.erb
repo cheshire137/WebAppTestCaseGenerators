@@ -1,0 +1,20 @@
+<% form_tag :action => "try_login" do %>
+  <fieldset class="center" id="login">
+    <legend>Log In</legend>
+    <ol>
+      <li>
+      	<label for="user_email">User ID/E-mail:</label>
+      	<%= text_field "user", "email", :size => 20 %>
+      </li>
+      <li>
+      	<label for="user_password">Password:</label>
+      	<%= password_field "user", "password", :size => 20 %>
+      </li>
+      <li>
+      	<%= image_submit_tag 'transparent.png', :id => "login_button" %>
+      	<%= link_to( image_tag("transparent.png", {:alt => 'Register'}), 
+      	    {:controller => 'login', :action => 'register'}, :id => 'register_button') %>
+      </li>
+    </ol>
+  </fieldset>
+<% end %>

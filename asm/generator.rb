@@ -7,9 +7,7 @@ unless ARGV.length == 1
 end
 
 erb = IO.readlines(ARGV.first).join
-parser = Parser.new
-ast = parser.parse(erb)
-ast.pair_tags
+ast = Parser.new.parse(erb)
 printf("Tree with %d nodes:\n", ast.length)
 pp ast
 puts '----------------------------'

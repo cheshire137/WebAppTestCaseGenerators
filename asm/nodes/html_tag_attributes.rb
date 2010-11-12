@@ -1,6 +1,7 @@
 module ERBGrammar
   class HTMLTagAttributes < Treetop::Runtime::SyntaxNode
     attr_accessor :index
+
     def eql?(other)
       return false unless other.is_a?(self.class)
       this_arr = to_a
@@ -10,6 +11,7 @@ module ERBGrammar
         return false unless el == other_arr[i]
       end
     end
+
     def hash
       h = 0
       to_a.each do |el|
@@ -17,6 +19,7 @@ module ERBGrammar
       end
       h
     end
+
     def to_a
       arr = [head]
       unless tail.empty?
@@ -24,6 +27,7 @@ module ERBGrammar
       end
       arr
     end
+
     def to_h
       hash = {}
       hash[head.name] = head.value
@@ -32,6 +36,7 @@ module ERBGrammar
       end
       hash
     end
+
     def to_s
       to_a.map(&:to_s).join(', ')
     end

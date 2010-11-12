@@ -13,6 +13,7 @@ class Parser
     if tree.nil?
       raise Exception, "Parse error at offset: #{@@parser.index}"
     end
+	tree.pair_tags
     tree
   end
 end
