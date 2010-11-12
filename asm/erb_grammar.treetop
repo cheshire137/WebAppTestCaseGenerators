@@ -52,18 +52,7 @@ grammar ERBGrammar
   end
 
   rule text
-    (([<>] !(html_tag_name / [/%!])) / [^<>])+ {
-      attr_accessor :index
-      def to_s
-        stripped = text_value.strip
-        if stripped.empty?
-          ""
-        else
-          #stripped.html_unescape.gsub(/\'/, "\\\\'")
-          stripped.gsub(/\'/, "\\\\'")
-        end
-      end
-    }
+    (([<>] !(html_tag_name / [/%!])) / [^<>])+ <Text>
   end
 
   rule html_open_tag
@@ -116,7 +105,6 @@ grammar ERBGrammar
       
       def extract_erb(s, parenthesize = true)
         if s =~ /^(.*?)<%=(.*?)%>(.*?)$/
-          #pre, code, post = $1.html_unescape.escape_single_quotes, $2, $3.html_unescape.escape_single_quotes
           pre, code, post = $1, $2, $3
           out = ""
           out = "'#{pre}' + " unless pre.length == 0
@@ -128,7 +116,6 @@ grammar ERBGrammar
           out = parenthesize_if_necessary(out) if parenthesize
           out
         else
-          #"'" + s.html_unescape.escape_single_quotes + "'"
           "'" + s + "'"
         end
       end
