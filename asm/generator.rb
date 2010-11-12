@@ -8,5 +8,5 @@ end
 
 erb = IO.readlines(ARGV.first).join
 parser = Parser.new
-parse_result = parser.parse(erb)
-pp parse_result
+ast = parser.parse(erb)
+parser.pair_tags(ast)
