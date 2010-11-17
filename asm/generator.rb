@@ -8,8 +8,6 @@ end
 
 erb = IO.readlines(ARGV.first).join
 ast = Parser.new.parse(erb)
-printf("Tree with %d nodes:\n", ast.length)
-pp ast
-puts '----------------------------'
 ast.compress_content
+printf("Tree with %d nodes:\n", ast.length)
 pp ast

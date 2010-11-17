@@ -2,14 +2,20 @@ module ERBGrammar
   class HTMLTagAttributes < Treetop::Runtime::SyntaxNode
     attr_accessor :index
 
-    def eql?(other)
-      return false unless other.is_a?(self.class)
-      this_arr = to_a
+	def ==(other)
+	  return false unless super(other)
+	  this_arr = to_a
       other_arr = other.to_a
       return false if this_arr.length != other_arr.length
       this_arr.each_with_index do |el, i|
         return false unless el == other_arr[i]
       end
+	  true
+	end
+
+    def eql?(other)
+      return false unless other.is_a?(self.class)
+	  self == other
     end
 
     def hash

@@ -2,6 +2,11 @@ module ERBGrammar
   class HTMLOpenTag < Treetop::Runtime::SyntaxNode
     attr_accessor :index, :content, :close
 
+	def ==(other)
+	  return false unless super(other)
+      name == other.name && attributes_str == other.attributes_str
+	end
+
 	def attributes
 	  attrs.empty? ? [] : attrs.to_a
 	end
@@ -12,7 +17,7 @@ module ERBGrammar
 
     def eql?(other)
       return false unless other.is_a?(self.class)
-      name == other.name && attributes_str == other.attributes_str
+	  self == other
     end
 
     def hash
@@ -20,7 +25,7 @@ module ERBGrammar
     end
 
     def name
-      tag_name.text_value
+      tag_name.text_value.downcase
     end
 
     def inspect
@@ -32,9 +37,10 @@ module ERBGrammar
     end
 
     def to_s(indent_level=0)
-	  sprintf("%s%d%s: %s", Tab * indent_level, @index,
+	  sprintf("%s%d%s: %s%s%s", Tab * indent_level, @index,
 		@close.nil? ? '' : sprintf("-%d", @close.index),
-		name)
+		name, attributes.length > 0 ? sprintf(" %s", attributes_str) : '',
+		@content.nil? ? '' : sprintf("\n%s--%s", Tab * (indent_level+1), @content.to_s))
     end
   end
 end

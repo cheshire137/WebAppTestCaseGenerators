@@ -2,9 +2,14 @@ module ERBGrammar
   class ERBOutputTag < Treetop::Runtime::SyntaxNode
     attr_accessor :index
 
+	def ==(other)
+	  return false unless super(other)
+	  code == other.code
+	end
+
     def eql?(other)
       return false unless other.is_a?(self.class)
-      code == other.code
+	  self == other
     end
 
     def hash

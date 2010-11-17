@@ -1,6 +1,7 @@
 module ERBGrammar
   class ERBDocument < Treetop::Runtime::SyntaxNode
 	include Enumerable
+	attr_reader :nodes, :initialized_nodes
 
 	def [](obj)
 	  if obj.is_a?(Fixnum)
@@ -14,67 +15,45 @@ module ERBGrammar
 		  i += 1
 		  result
 		end
+	  else
+		nil
 	  end
-	  nil
 	end
 
 	def compress_content
-	  indices_consumed = []
-	  each_with_index do |element, i|
-		next unless element.respond_to? :index
+	  (length-1).downto(0) do |i|
+		element = self[i]
+		puts "Looking at <" + element.to_s + ">"
 		if element.respond_to? :pair_match?
-		  unless indices_consumed.include? element.index
-			if element.respond_to?(:close) && !element.close.nil?
-			  # element is open tag
-			  range = element.index+1...element.close.index
-			  element.content = self[range]
-			  indices_consumed += range.to_a
+		  if element.respond_to?(:close) && !element.close.nil?
+			# element is open tag
+			range = element.index+1...element.close.index
+			content = self[range]
+			puts "Range: " + range.to_s + ", content: " + content.to_s
+			unless content.nil?
+			  puts "Found content for element <" + element.to_s + ">"
+			  element.content = content.dup 
+			  range.to_a.each do |consumed_el|
+				puts "Deleting consumed node <" + consumed_el.to_s + ">"
+				@nodes.delete(consumed_el)
+			  end
 			  # Closing element is not part of the content, but it no longer
 			  # needs to appear as a separate element in the tree
-			  indices_consumed << element.close.index
+			  @nodes.delete(element.close)
 			end
 		  end
 		end
-		if indices_consumed.include? element.index
-		  delete_at(i)
-		end
 	  end
-	end
-
-	def delete_at(index)
-	  unless index.is_a?(Fixnum)
-		raise ArgumentError, "Given index must be a Fixnum"
-	  end
-	  len = length
-	  if index < 0 || index >= length
-		raise ArgumentError, sprintf("Given index %d is invalid--must be between 0 <= index < %d", len)
-	  end
-	  obj = self[index]
-	  if node.index == index || 0 == index
-		if x.nil? || x.empty?
-		  node = nil
-		else
-		  node = x.shift
-		end
-	  else
-		i = 0
-		x = x.collect do |el|
-		  result = if el.index == index || i == index
-			nil
-		  else
-			el
-		  end
-		  i += 1
-		  result
-		end.compact
-	  end
-	  obj
 	end
 
 	def each
-	  yield node
-	  if !x.nil? && x.respond_to?(:each)
-		x.each { |other| yield other }
+	  if @initialized_nodes
+		@nodes.each { |n| yield n }
+	  else
+		yield node
+		if !x.nil? && x.respond_to?(:each)
+		  x.each { |other| yield other }
+		end
 	  end
 	end
 
@@ -84,13 +63,20 @@ module ERBGrammar
 
 	# Returns the number of HTML, ERB, and text nodes in this document
 	def length
-	  1 + (x.respond_to?(:length) ? x.length : 0)
+	  if @initialized_nodes
+		@nodes.length
+	  else
+		1 + (x.respond_to?(:length) ? x.length : 0)
+	  end
 	end
 
     def pair_tags
+	  @initialized_nodes = false
+	  @nodes = []
       mateless = []
       each_with_index do |element, i|
         next unless element.respond_to? :index
+		@nodes << element
         element.index = i
         next unless element.respond_to? :pair_match?
         # Find first matching mate for this element in the array of mateless
@@ -109,6 +95,7 @@ module ERBGrammar
           end
         end
       end
+	  @initialized_nodes = true
     end
 
     def to_s

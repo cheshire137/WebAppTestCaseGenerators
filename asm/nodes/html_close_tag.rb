@@ -2,9 +2,14 @@ module ERBGrammar
   class HTMLCloseTag < Treetop::Runtime::SyntaxNode
     attr_accessor :index
 
+	def ==(other)
+	  return false unless super(other)
+	  name == other.name
+	end
+
     def eql?(other)
       return false unless other.is_a?(self.class)
-      name == other.name
+	  self == other
     end
 
     def hash
@@ -12,7 +17,7 @@ module ERBGrammar
     end
 
     def name
-      tag_name.text_value
+      tag_name.text_value.downcase
     end
 
     def inspect
