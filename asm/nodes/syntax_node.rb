@@ -47,5 +47,12 @@ module ERBGrammar
       end
       hash
     end
+
+	alias_method :old_to_s, :to_s
+	def new_to_s(indent_level=0)
+	  puts "Old: " + inspect
+	  Tab * indent_level + old_to_s
+	end
+	alias_method :to_s, :new_to_s
   end
 end

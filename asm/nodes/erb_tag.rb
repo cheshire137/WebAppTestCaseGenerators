@@ -1,6 +1,6 @@
 module ERBGrammar
   class ERBTag < Treetop::Runtime::SyntaxNode
-    attr_accessor :index, :content, :close, :sexp, :is_opening, :is_closing
+    attr_accessor :index, :content, :close, :sexp
 
 	def ==(other)
 	  return false unless super(other)
@@ -36,9 +36,8 @@ module ERBGrammar
 					  end.join("\n") + "\n"
 					end + close_str
 	  range_str = @close.nil? ? '' : sprintf("-%d", @close.index)
-	  open_close_str = @is_opening ? ' (open)' : @is_closing ? ' (close)' : ''
-	  sprintf("%s%d%s%s: %s%s", Tab * indent_level, @index,
-		range_str, open_close_str, ruby_code, content_str)
+	  sprintf("%s%d%s: %s%s", Tab * indent_level, @index,
+		range_str, ruby_code, content_str)
     end
   end
 end

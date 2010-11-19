@@ -5,6 +5,7 @@ module ERBGrammar
   class ERBDocument < Treetop::Runtime::SyntaxNode
 	include Enumerable
 	attr_reader :nodes, :initialized_nodes
+	@@parser = RubyParser.new
 
 	def [](obj)
 	  if obj.is_a?(Fixnum)
@@ -39,17 +40,19 @@ module ERBGrammar
 		element.content = content.dup 
 		content.each do |consumed_el|
 		  size_before = @nodes.length
+		  del_node_str = consumed_el.to_s
 		  @nodes.delete(consumed_el)
 		  if size_before - @nodes.length > 1
-			raise "Deleted more than one content node"
+			raise "Deleted more than one content node equaling\n" + del_node_str
 		  end
 		end
 		# Closing element is not part of the content, but it no longer
 		# needs to appear as a separate element in the tree
 		size_before = @nodes.length
+		del_node_str = element.close.to_s
 		@nodes.delete(element.close)
 		if size_before - @nodes.length > 1
-		  raise "Deleted more than one closing node"
+		  raise "Deleted more than one closing node equaling\n" + del_node_str
 		end
 	  end
 	end
@@ -67,9 +70,9 @@ module ERBGrammar
 
 	def find_code_units
 	  code_elements = ERBDocument.extract_ruby_code_elements(@nodes)
-	  puts '-----------------------'
-	  puts "Code lines:\n" + code_elements.map(&:ruby_code).join("\n")
-	  puts '-----------------------'
+	  #puts '-----------------------'
+	  #puts "Code lines:\n" + code_elements.map(&:ruby_code).join("\n")
+	  #puts '-----------------------'
 	  ERBDocument.find_code_units(code_elements)
 	end
 
@@ -123,32 +126,27 @@ module ERBGrammar
 		code_els = []
 		code_classes = [ERBTag, ERBOutputTag]
 		nodes.each do |el|
-		  if code_classes.include? el.class
-			code_els << el
-		  end
-		  if el.respond_to?(:content) && !el.content.nil?
-			code_els += extract_ruby_code_elements(el.content)
+		  code_els << el if code_classes.include? el.class
+		  if el.respond_to?(:content) && !(content = el.content).nil?
+			# Recursively check content of this node for other code elements
+			code_els += extract_ruby_code_elements(content)
 		  end
 		end
 		code_els
 	  end
 
 	  def ERBDocument.find_code_units(code_elements)
-		puts "Finding code units in:\n\t" + code_elements.map(&:to_s).join("\n\t")
 		num_elements = code_elements.length
 		start_index = 0
 		end_index = 0
-		parser = RubyParser.new # TODO: store in class var?
 		while end_index < num_elements
 		  range = start_index..end_index
-		  puts "Lines " + range.to_a.join(', ')
 		  unit_elements = code_elements[range]
 		  unit_lines = unit_elements.map(&:ruby_code)
 		  begin
-			sexp = parser.parse(unit_lines.join("\n"))
+			sexp = @@parser.parse(unit_lines.join("\n"))
 			setup_code_unit(unit_elements, sexp)
-			end_index += 1
-			start_index = end_index
+			start_index = end_index = end_index + 1
 		  rescue Racc::ParseError
 			end_index += 1
 		  end
@@ -163,12 +161,9 @@ module ERBGrammar
 		unless opening.is_a? ERBTag
 		  raise "Expected opening element of code unit to be an ERBTag"
 		end
-		opening.is_opening = true
 		opening.close = unit_elements.last
-		opening.close.is_closing = true
 		opening.content = unit_elements[1...unit_elements.length-1]
 		opening.sexp = sexp
-		puts "Found unit:\n\t" + opening.to_s
 		find_code_units(opening.content)
 	  end
   end

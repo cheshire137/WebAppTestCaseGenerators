@@ -40,12 +40,20 @@ module ERBGrammar
     end
 
     def to_s(indent_level=0)
+	  begin
 	  close_str = @close.nil? ? '' : @close.to_s(indent_level + 1)
+	  rescue ArgumentError
+		raise "Woah, @close is type " + @close.class.name + ":\n" + @close.to_s
+	  end
 	  content_str = if @content.nil?
 					  "\n"
 					else
 					  "\n" + @content.collect do |el|
+						begin
 						el.to_s(indent_level + 1)
+						rescue ArgumentError
+						  raise "Yikes, el is type " + el.class.name + ":\n" + el.to_s
+						end
 					  end.join("\n") + "\n"
 					end + close_str
 	  range_str = @close.nil? ? '' : sprintf("-%d", @close.index)

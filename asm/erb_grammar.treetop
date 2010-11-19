@@ -69,9 +69,7 @@ grammar ERBGrammar
   end
   
   rule html_directive
-    '<!' [^>]* '>' {
-      attr_accessor :index
-    }
+    '<!' [^>]* '>' <HTMLDirective>
   end
 
   rule html_tag_attributes
@@ -112,8 +110,8 @@ grammar ERBGrammar
         end
       end
 
-      def to_s
-        val.text_value
+      def to_s(indent_level=0)
+        Tab * indent_level + val.text_value
       end
     }
   end

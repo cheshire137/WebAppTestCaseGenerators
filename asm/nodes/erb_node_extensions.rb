@@ -14,4 +14,5 @@ module ERBGrammar
   require File.join(base_path, 'ruby_code.rb')
   require File.join(base_path, 'text.rb')
   require File.join(base_path, 'whitespace.rb')
+  require File.join(base_path, 'html_directive.rb')
 end
