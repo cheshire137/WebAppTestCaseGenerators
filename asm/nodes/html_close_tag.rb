@@ -4,7 +4,7 @@ module ERBGrammar
 
 	def ==(other)
 	  return false unless super(other)
-	  name == other.name
+	  name == other.name && (@index.nil? && other.index.nil? || @index == other.index)
 	end
 
     def eql?(other)
@@ -13,7 +13,9 @@ module ERBGrammar
     end
 
     def hash
-      name.hash
+      h = name.hash
+	  h = h ^ @index.hash unless @index.nil?
+	  h
     end
 
     def name

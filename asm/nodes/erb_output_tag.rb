@@ -4,7 +4,7 @@ module ERBGrammar
 
 	def ==(other)
 	  return false unless super(other)
-	  code == other.code
+	  code == other.code && (@index.nil? && other.index.nil? || @index == other.index)
 	end
 
     def eql?(other)
@@ -13,7 +13,9 @@ module ERBGrammar
     end
 
     def hash
-      code.hash
+      h = code.hash
+	  h = h ^ @index.hash unless @index.nil?
+	  h
     end
 
     def inspect
@@ -25,7 +27,7 @@ module ERBGrammar
     end
 
     def to_s(indent_level=0)
-      sprintf("%s%d: %s", Tab * indent_level, @index, ruby_code)
+      sprintf("%s%d: <%s= %s %s>", Tab * indent_level, @index, '%', ruby_code, '%')
     end
   end
 end

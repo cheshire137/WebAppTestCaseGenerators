@@ -23,6 +23,7 @@ module ERBGrammar
 	end
 
 	def compress_content
+	  # Need to go in reverse lest we end up end up with unnested content
 	  (length-1).downto(0) do |i|
 		element = self[i]
 		next unless element.respond_to?(:pair_match?) &&
@@ -31,14 +32,21 @@ module ERBGrammar
 		# element is open tag
 		range = element.index+1...element.close.index
 		content = self[range].compact
-		unless content.nil? || content.empty?
-		  element.content = content.dup 
-		  content.each do |consumed_el|
-			@nodes.delete(consumed_el)
+		next if content.nil? || content.empty?
+		element.content = content.dup 
+		content.each do |consumed_el|
+		  size_before = @nodes.length
+		  @nodes.delete(consumed_el)
+		  if size_before - @nodes.length > 1
+			raise "Deleted more than one content node"
 		  end
-		  # Closing element is not part of the content, but it no longer
-		  # needs to appear as a separate element in the tree
-		  @nodes.delete(element.close)
+		end
+		# Closing element is not part of the content, but it no longer
+		# needs to appear as a separate element in the tree
+		size_before = @nodes.length
+		@nodes.delete(element.close)
+		if size_before - @nodes.length > 1
+		  raise "Deleted more than one closing node"
 		end
 	  end
 	end
@@ -52,6 +60,10 @@ module ERBGrammar
 		  x.each { |other| yield other }
 		end
 	  end
+	end
+
+	def extract_ruby_code
+	  ERBDocument.extract_ruby_code(@nodes)
 	end
 
     def inspect
@@ -96,7 +108,22 @@ module ERBGrammar
     end
 
     def to_s(indent_level=0)
-	  (Tab * indent_level) + map(&:to_s).select { |str| !str.blank? }.join("\n")
+	  Tab * indent_level + map(&:to_s).select { |str| !str.blank? }.join("\n")
     end
+
+	private
+	  def ERBDocument.extract_ruby_code(nodes)
+		code = []
+		code_classes = [ERBTag, ERBOutputTag]
+		nodes.each do |el|
+		  if code_classes.include? el.class
+			code << el.ruby_code
+		  end
+		  if el.respond_to?(:content) && !el.content.nil?
+			code += extract_ruby_code(el.content)
+		  end
+		end
+		code
+	  end
   end
 end

@@ -29,7 +29,7 @@ grammar ERBGrammar
   end
 
   rule ruby_code
-    (('%' !'>') /  [^%])* <RubyCode>
+    (('%' !'>') / [^%])* <RubyCode>
   end
 
   rule tab

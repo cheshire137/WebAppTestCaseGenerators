@@ -14,6 +14,7 @@ class Parser
       raise Exception, "Parse error at offset: #{@@parser.index}"
     end
 	tree.pair_tags
+	tree.compress_content
     tree
   end
 end
