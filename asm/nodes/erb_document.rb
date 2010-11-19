@@ -67,30 +67,10 @@ module ERBGrammar
 
 	def find_code_units
 	  code_elements = ERBDocument.extract_ruby_code_elements(@nodes)
-	  num_elements = code_elements.length
-	  start_index = 0
-	  end_index = 1
-	  parser = RubyParser.new
-	  while start_index < num_elements && end_index << num_elements
-		begin
-		  unit_elements = code_elements[start_index...end_index]
-		  unit_lines = unit_elements.map(&:ruby_code)
-		  unit = parser.parse(unit_lines.join("\n"))
-		  opening = unit_elements.first
-		  unless opening.is_a? ERBTag
-			raise "Expected opening element of code unit to be an ERBTag"
-		  end
-		  opening.is_opening = true
-		  opening.close = unit_elements.last
-		  opening.close.is_closing = true
-		  opening.content = unit_elements[1...end_index-1]
-		  opening.sexp = unit
-		  start_index = end_index
-		  end_index = start_index + 1
-		rescue Racc::ParseError
-		  end_index += 1
-		end
-	  end
+	  puts '-----------------------'
+	  puts "Code lines:\n" + code_elements.map(&:ruby_code).join("\n")
+	  puts '-----------------------'
+	  ERBDocument.find_code_units(code_elements)
 	end
 
     def inspect
@@ -151,6 +131,45 @@ module ERBGrammar
 		  end
 		end
 		code_els
+	  end
+
+	  def ERBDocument.find_code_units(code_elements)
+		puts "Finding code units in:\n\t" + code_elements.map(&:to_s).join("\n\t")
+		num_elements = code_elements.length
+		start_index = 0
+		end_index = 0
+		parser = RubyParser.new # TODO: store in class var?
+		while end_index < num_elements
+		  range = start_index..end_index
+		  puts "Lines " + range.to_a.join(', ')
+		  unit_elements = code_elements[range]
+		  unit_lines = unit_elements.map(&:ruby_code)
+		  begin
+			sexp = parser.parse(unit_lines.join("\n"))
+			setup_code_unit(unit_elements, sexp)
+			end_index += 1
+			start_index = end_index
+		  rescue Racc::ParseError
+			end_index += 1
+		  end
+		end
+	  end
+
+	  def ERBDocument.setup_code_unit(unit_elements, sexp)
+		if unit_elements.length < 2
+		  return
+		end
+		opening = unit_elements.first
+		unless opening.is_a? ERBTag
+		  raise "Expected opening element of code unit to be an ERBTag"
+		end
+		opening.is_opening = true
+		opening.close = unit_elements.last
+		opening.close.is_closing = true
+		opening.content = unit_elements[1...unit_elements.length-1]
+		opening.sexp = sexp
+		puts "Found unit:\n\t" + opening.to_s
+		find_code_units(opening.content)
 	  end
   end
 end

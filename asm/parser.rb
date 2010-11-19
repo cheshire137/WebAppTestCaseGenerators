@@ -9,12 +9,16 @@ class Parser
   @@parser = ERBGrammarParser.new
 
   def parse(data)
+	puts "Parsing ERB file with Treetop parser..."
     tree = @@parser.parse data
     if tree.nil?
       raise Exception, "Parse error at offset: #{@@parser.index}"
     end
+	puts "Pairing HTML tags..."
 	tree.pair_tags
+	puts "Finding Ruby code units..."
 	tree.find_code_units
+	puts "Compressing content..."
 	tree.compress_content
     tree
   end

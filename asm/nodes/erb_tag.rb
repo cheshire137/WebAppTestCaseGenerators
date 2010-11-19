@@ -23,14 +23,13 @@ module ERBGrammar
     end
 
     def ruby_code
-      #code.text_value_removing_trims.strip
 	  code.content_removing_trims
     end
 
     def to_s(indent_level=0)
 	  close_str = @close.nil? ? '' : @close.to_s(indent_level + 1)
 	  content_str = if @content.nil?
-					  @is_closing ? '' : "\n"
+					  ''
 					else
 					  "\n" + @content.collect do |el|
 						el.to_s(indent_level + 1)
