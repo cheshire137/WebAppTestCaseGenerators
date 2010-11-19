@@ -8,10 +8,12 @@ module ERBGrammar
 		each_with_index do |el, i|
 		  return el if el.index == obj || i == obj
 		end
-	  elsif obj.is_a?(Range)
+	  elsif obj.respond_to?(:include?)
 		i = 0
 		select do |el|
-		  result = obj.include?(el.index) || obj.include?(i)
+		  index_match = !el.index.nil? && obj.include?(el.index)
+		  i_match = el.index.nil? && obj.include?(i)
+		  result = index_match || i_match
 		  i += 1
 		  result
 		end
@@ -23,25 +25,20 @@ module ERBGrammar
 	def compress_content
 	  (length-1).downto(0) do |i|
 		element = self[i]
-		puts "Looking at <" + element.to_s + ">"
-		if element.respond_to? :pair_match?
-		  if element.respond_to?(:close) && !element.close.nil?
-			# element is open tag
-			range = element.index+1...element.close.index
-			content = self[range]
-			puts "Range: " + range.to_s + ", content: " + content.to_s
-			unless content.nil?
-			  puts "Found content for element <" + element.to_s + ">"
-			  element.content = content.dup 
-			  range.to_a.each do |consumed_el|
-				puts "Deleting consumed node <" + consumed_el.to_s + ">"
-				@nodes.delete(consumed_el)
-			  end
-			  # Closing element is not part of the content, but it no longer
-			  # needs to appear as a separate element in the tree
-			  @nodes.delete(element.close)
-			end
+		next unless element.respond_to?(:pair_match?) &&
+					element.respond_to?(:close) &&
+					!element.close.nil?
+		# element is open tag
+		range = element.index+1...element.close.index
+		content = self[range].compact
+		unless content.nil? || content.empty?
+		  element.content = content.dup 
+		  content.each do |consumed_el|
+			@nodes.delete(consumed_el)
 		  end
+		  # Closing element is not part of the content, but it no longer
+		  # needs to appear as a separate element in the tree
+		  @nodes.delete(element.close)
 		end
 	  end
 	end
@@ -98,8 +95,8 @@ module ERBGrammar
 	  @initialized_nodes = true
     end
 
-    def to_s
-	  map(&:to_s).select { |str| !str.blank? }.join("\n")
+    def to_s(indent_level=0)
+	  (Tab * indent_level) + map(&:to_s).select { |str| !str.blank? }.join("\n")
     end
   end
 end

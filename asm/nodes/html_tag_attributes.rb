@@ -43,8 +43,8 @@ module ERBGrammar
       hash
     end
 
-    def to_s
-      to_a.map(&:to_s).join(', ')
+    def to_s(indent_level=0)
+      Tab * indent_level + to_a.map(&:to_s).join(', ')
     end
   end
 end

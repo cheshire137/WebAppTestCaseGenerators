@@ -16,10 +16,10 @@ module ERBGrammar
 	  text_value.hash
 	end
 
-    def to_s
+    def to_s(indent_level=0)
       stripped = text_value.strip
       sprintf(
-		"%d: %s", @index,
+		"%s%d: %s", Tab * indent_level, @index,
 		if stripped.empty?
 		  ''
 		else

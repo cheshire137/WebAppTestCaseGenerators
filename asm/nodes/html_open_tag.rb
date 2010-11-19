@@ -37,10 +37,17 @@ module ERBGrammar
     end
 
     def to_s(indent_level=0)
-	  sprintf("%s%d%s: %s%s%s", Tab * indent_level, @index,
-		@close.nil? ? '' : sprintf("-%d", @close.index),
-		name, attributes.length > 0 ? sprintf(" %s", attributes_str) : '',
-		@content.nil? ? '' : sprintf("\n%s--%s", Tab * (indent_level+1), @content.to_s))
+	  content_str = if @content.nil?
+					  ''
+					else
+					  close_str = @close.nil? ? '' : @close.to_s(indent_level + 1)
+					  "\n" + @content.collect do |el|
+						el.to_s(indent_level + 1)
+					  end.join("\n") + "\n" + close_str
+					end
+	  range_str = @close.nil? ? '' : sprintf("-%d", @close.index)
+	  sprintf("%s%d%s: %s %s%s", Tab * indent_level, @index,
+		range_str, name, attributes_str, content_str)
     end
   end
 end

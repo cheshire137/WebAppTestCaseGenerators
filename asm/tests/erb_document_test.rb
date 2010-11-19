@@ -47,6 +47,15 @@ class ERBDocumentTest < Test::Unit::TestCase
 	assert_equal 1, elements[1].index
   end
 
+  def test_square_bracket_accessor_range2
+	doc = Parser.new.parse(fixture('login_index.html'))
+	assert_not_nil doc
+	elements = doc[14...15].compact
+	assert_equal Array, elements.class
+	assert_equal 1, elements.length,
+	  "Expected only one result returned from single-element range"
+  end
+
   def test_length
 	doc = Parser.new.parse(fixture('login_index.html'))
 	assert_not_nil doc
