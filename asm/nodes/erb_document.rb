@@ -1,3 +1,6 @@
+require 'rubygems'
+require 'ruby_parser'
+
 module ERBGrammar
   class ERBDocument < Treetop::Runtime::SyntaxNode
 	include Enumerable
@@ -26,9 +29,9 @@ module ERBGrammar
 	  # Need to go in reverse lest we end up end up with unnested content
 	  (length-1).downto(0) do |i|
 		element = self[i]
-		next unless element.respond_to?(:pair_match?) &&
-					element.respond_to?(:close) &&
-					!element.close.nil?
+		next unless element.respond_to?(:close) &&
+					!element.close.nil? &&
+					element.respond_to?(:content)
 		# element is open tag
 		range = element.index+1...element.close.index
 		content = self[range].compact
@@ -62,8 +65,32 @@ module ERBGrammar
 	  end
 	end
 
-	def extract_ruby_code
-	  ERBDocument.extract_ruby_code(@nodes)
+	def find_code_units
+	  code_elements = ERBDocument.extract_ruby_code_elements(@nodes)
+	  num_elements = code_elements.length
+	  start_index = 0
+	  end_index = 1
+	  parser = RubyParser.new
+	  while start_index < num_elements && end_index << num_elements
+		begin
+		  unit_elements = code_elements[start_index...end_index]
+		  unit_lines = unit_elements.map(&:ruby_code)
+		  unit = parser.parse(unit_lines.join("\n"))
+		  opening = unit_elements.first
+		  unless opening.is_a? ERBTag
+			raise "Expected opening element of code unit to be an ERBTag"
+		  end
+		  opening.is_opening = true
+		  opening.close = unit_elements.last
+		  opening.close.is_closing = true
+		  opening.content = unit_elements[1...end_index-1]
+		  opening.sexp = unit
+		  start_index = end_index
+		  end_index = start_index + 1
+		rescue Racc::ParseError
+		  end_index += 1
+		end
+	  end
 	end
 
     def inspect
@@ -112,18 +139,18 @@ module ERBGrammar
     end
 
 	private
-	  def ERBDocument.extract_ruby_code(nodes)
-		code = []
+	  def ERBDocument.extract_ruby_code_elements(nodes)
+		code_els = []
 		code_classes = [ERBTag, ERBOutputTag]
 		nodes.each do |el|
 		  if code_classes.include? el.class
-			code << el.ruby_code
+			code_els << el
 		  end
 		  if el.respond_to?(:content) && !el.content.nil?
-			code += extract_ruby_code(el.content)
+			code_els += extract_ruby_code_elements(el.content)
 		  end
 		end
-		code
+		code_els
 	  end
   end
 end
