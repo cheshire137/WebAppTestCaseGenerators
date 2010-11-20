@@ -1,6 +1,9 @@
 module ERBGrammar
   class Treetop::Runtime::SyntaxNode
     include Enumerable
+	include SharedMethods
+    attr_accessor :index
+	alias_method :old_to_s, :to_s
 
 	def [](obj)
 	  if obj.is_a?(Fixnum)
@@ -11,8 +14,11 @@ module ERBGrammar
 	end
 
 	def ==(other)
-      return false unless other.is_a?(self.class)
-	  return false unless length == other.length
+	  # Necessary to check other.class to prevent comparing a SyntaxNode with a
+	  # TrueClass instance, for example
+      return false unless other.is_a?(self.class) &&
+						  length == other.length &&
+						  index_eql?(other)
 	  if nonterminal?
 		elements.each_with_index do |el, i|
 		  return false unless el == other[i]
@@ -48,11 +54,10 @@ module ERBGrammar
       hash
     end
 
-	alias_method :old_to_s, :to_s
 	def new_to_s(indent_level=0)
-	  puts "Old: " + inspect
-	  Tab * indent_level + old_to_s
+	  to_s_with_prefix(indent_level, old_to_s)
 	end
+
 	alias_method :to_s, :new_to_s
   end
 end

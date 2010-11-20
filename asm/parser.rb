@@ -18,8 +18,13 @@ class Parser
 	tree.pair_tags
 	puts "Finding Ruby code units..."
 	tree.find_code_units
+    tree
+  end
+
+  def parse_and_compress(data)
+	tree = parse(data)
 	puts "Compressing content..."
 	tree.compress_content
-    tree
+	tree
   end
 end

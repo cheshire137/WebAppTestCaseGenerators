@@ -1,27 +1,16 @@
 module ERBGrammar
   class Text < Treetop::Runtime::SyntaxNode
-    attr_accessor :index
-
 	def ==(other)
-	  return false unless super(other)
-	  text_value == other.text_value && (@index.nil? && other.index.nil? || @index == other.index)
-	end
-
-	def eql?(other)
-      return false unless other.is_a?(self.class)
-	  self == other
+	  super(other) && prop_eql?(other, :text_value)
 	end
 
 	def hash
-	  h = text_value.hash
-	  h = h ^ @index.hash unless @index.nil?
-	  h
+	  prop_hash(:text_value)
 	end
 
     def to_s(indent_level=0)
       stripped = text_value.strip
-      sprintf(
-		"%s%d: %s", Tab * indent_level, @index,
+      to_s_with_prefix(indent_level, 
 		if stripped.empty?
 		  ''
 		else

@@ -1,9 +1,7 @@
 module ERBGrammar
   class HTMLTagAttributes < Treetop::Runtime::SyntaxNode
-    attr_accessor :index
-
 	def ==(other)
-	  return false unless super(other)
+	  return false unless super(other) && index_eql?(other)
 	  this_arr = to_a
       other_arr = other.to_a
       return false if this_arr.length != other_arr.length
@@ -13,13 +11,8 @@ module ERBGrammar
 	  true
 	end
 
-    def eql?(other)
-      return false unless other.is_a?(self.class)
-	  self == other
-    end
-
     def hash
-      h = 0
+      h = prop_hash()
       to_a.each do |el|
         h = h ^ el.hash
       end
@@ -44,7 +37,7 @@ module ERBGrammar
     end
 
     def to_s(indent_level=0)
-      Tab * indent_level + to_a.map(&:to_s).join(', ')
+      to_a.map(&:to_s).join(', ')
     end
   end
 end

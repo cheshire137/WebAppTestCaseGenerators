@@ -1,19 +1,11 @@
 module ERBGrammar
   class HTMLQuotedValue < Treetop::Runtime::SyntaxNode
-    attr_accessor :index
-
 	def ==(other)
-	  return false unless super(other)
-      value == other.value
+	  super(other) && prop_eql?(other, :value)
 	end
 
-    def eql?(other)
-      return false unless other.is_a?(self.class)
-	  self == other
-    end
-
     def hash
-      value.hash
+	  prop_hash(:value)
     end
 
     def inspect
@@ -21,7 +13,7 @@ module ERBGrammar
     end
 
     def to_s(indent_level=0)
-      Tab * indent_level + value
+	  to_s_with_prefix(indent_level, value)
     end
 
     def value

@@ -1,6 +1,6 @@
 module ERBGrammar
-  Tab = '  '
   base_path = File.expand_path(File.dirname(__FILE__))
+  require File.join(base_path, 'shared.rb')
   require File.join(base_path, 'syntax_node.rb')
   require File.join(base_path, 'erb_document.rb')
   require File.join(base_path, 'erb_output_tag.rb')

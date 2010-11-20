@@ -15,8 +15,9 @@ module ERBGrammar
 	  elsif obj.respond_to?(:include?)
 		i = 0
 		select do |el|
-		  index_match = !el.index.nil? && obj.include?(el.index)
-		  i_match = el.index.nil? && obj.include?(i)
+		  is_nil = el.index.nil?
+		  index_match = !is_nil && obj.include?(el.index)
+		  i_match = is_nil && obj.include?(i)
 		  result = index_match || i_match
 		  i += 1
 		  result
@@ -39,21 +40,11 @@ module ERBGrammar
 		next if content.nil? || content.empty?
 		element.content = content.dup 
 		content.each do |consumed_el|
-		  size_before = @nodes.length
-		  del_node_str = consumed_el.to_s
-		  @nodes.delete(consumed_el)
-		  if size_before - @nodes.length > 1
-			raise "Deleted more than one content node equaling\n" + del_node_str
-		  end
+		  delete_node_check_size(consumed_el)
 		end
 		# Closing element is not part of the content, but it no longer
 		# needs to appear as a separate element in the tree
-		size_before = @nodes.length
-		del_node_str = element.close.to_s
-		@nodes.delete(element.close)
-		if size_before - @nodes.length > 1
-		  raise "Deleted more than one closing node equaling\n" + del_node_str
-		end
+		delete_node_check_size(element.close)
 	  end
 	end
 
@@ -118,10 +109,18 @@ module ERBGrammar
     end
 
     def to_s(indent_level=0)
-	  Tab * indent_level + map(&:to_s).select { |str| !str.blank? }.join("\n")
+	  map(&:to_s).select { |str| !str.blank? }.join("\n")
     end
 
 	private
+	  def delete_node_check_size(node_to_del)
+		size_before = @nodes.length
+		del_node_str = node_to_del.to_s
+		@nodes.delete(node_to_del)
+		if size_before - @nodes.length > 1
+		  raise "Deleted more than one node equaling\n" + del_node_str
+		end
+	  end
 	  def ERBDocument.extract_ruby_code_elements(nodes)
 		code_els = []
 		code_classes = [ERBTag, ERBOutputTag]
@@ -143,18 +142,19 @@ module ERBGrammar
 		  range = start_index..end_index
 		  unit_elements = code_elements[range]
 		  unit_lines = unit_elements.map(&:ruby_code)
+		  end_index += 1
 		  begin
 			sexp = @@parser.parse(unit_lines.join("\n"))
 			setup_code_unit(unit_elements, sexp)
-			start_index = end_index = end_index + 1
+			start_index = end_index
 		  rescue Racc::ParseError
-			end_index += 1
 		  end
 		end
 	  end
 
 	  def ERBDocument.setup_code_unit(unit_elements, sexp)
-		if unit_elements.length < 2
+		len = unit_elements.length
+		if len < 2
 		  return
 		end
 		opening = unit_elements.first
@@ -162,7 +162,7 @@ module ERBGrammar
 		  raise "Expected opening element of code unit to be an ERBTag"
 		end
 		opening.close = unit_elements.last
-		opening.content = unit_elements[1...unit_elements.length-1]
+		opening.content = unit_elements[1...len-1]
 		opening.sexp = sexp
 		find_code_units(opening.content)
 	  end

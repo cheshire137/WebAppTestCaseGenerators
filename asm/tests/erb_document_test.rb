@@ -3,7 +3,7 @@ require File.join(base_path, '..', 'parser.rb')
 require File.join(base_path, 'test_helper.rb')
 
 class ERBDocumentTest < Test::Unit::TestCase
-  def test_delete_at
+  def test_delete_node
 	doc = Parser.new.parse(fixture('login_index.html'))
 	assert_not_nil doc
 	li = doc[6]
@@ -11,7 +11,7 @@ class ERBDocumentTest < Test::Unit::TestCase
 	assert_equal "ERBGrammar::HTMLOpenTag", li.class.name
 	assert_equal 'li', li.name
 	old_length = doc.length
-	deleted_node = doc.nodes.delete_at(6)
+	deleted_node = doc.nodes.delete(li)
 	assert_not_equal li, doc[6], "New node in index 6 should not be the same as the one we just deleted"
 	new_length = doc.length
 	assert_equal old_length-1, new_length, "New length of ERBDocument should be 1 less than old length"

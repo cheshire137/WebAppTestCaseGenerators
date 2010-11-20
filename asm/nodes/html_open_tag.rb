@@ -1,11 +1,11 @@
 module ERBGrammar
   class HTMLOpenTag < Treetop::Runtime::SyntaxNode
-    attr_accessor :index, :content, :close
+	include SharedOpenTagMethods
+	include SharedHTMLTagMethods
+    attr_accessor :content, :close
 
 	def ==(other)
-	  return false unless super(other)
-      name == other.name && attributes_str == other.attributes_str &&
-		(@index.nil? && other.index.nil? || @index == other.index)
+	  super(other) && prop_eql?(other, :name, :attributes_str)
 	end
 
 	def attributes
@@ -16,15 +16,8 @@ module ERBGrammar
       attrs.empty? ? '' : attrs.to_s
     end
 
-    def eql?(other)
-      return false unless other.is_a?(self.class)
-	  self == other
-    end
-
     def hash
-	  h = name.hash ^ attributes_str.hash
-	  h = h ^ @index.hash unless @index.nil?
-	  h
+	  prop_hash(:name, :attributes_str)
     end
 
     def name
@@ -36,29 +29,12 @@ module ERBGrammar
     end
 
     def pair_match?(other)
-      other.is_a?(HTMLCloseTag) && name == other.name
+	  opposite_type_same_name?(HTMLCloseTag, other)
     end
 
     def to_s(indent_level=0)
-	  begin
-	  close_str = @close.nil? ? '' : @close.to_s(indent_level + 1)
-	  rescue ArgumentError
-		raise "Woah, @close is type " + @close.class.name + ":\n" + @close.to_s
-	  end
-	  content_str = if @content.nil?
-					  "\n"
-					else
-					  "\n" + @content.collect do |el|
-						begin
-						el.to_s(indent_level + 1)
-						rescue ArgumentError
-						  raise "Yikes, el is type " + el.class.name + ":\n" + el.to_s
-						end
-					  end.join("\n") + "\n"
-					end + close_str
-	  range_str = @close.nil? ? '' : sprintf("-%d", @close.index)
-	  sprintf("%s%d%s: %s %s%s", Tab * indent_level, @index,
-		range_str, name, attributes_str, content_str)
+	  to_s_with_prefix(indent_level, sprintf("%s %s\n%s",
+		name, attributes_str, content_str(indent_level+1)))
     end
   end
 end

@@ -1,19 +1,11 @@
 module ERBGrammar
   class RubyCode < Treetop::Runtime::SyntaxNode
-    attr_accessor :index
-
 	def ==(other)
-	  return false unless super(other)
-      content_removing_trims == other.content_removing_trims
+	  super(other) && prop_eql?(other, :content_removing_trims)
 	end
 
-    def eql?(other)
-      return false unless other.is_a?(self.class)
-	  self == other
-    end
-
     def hash
-      content_removing_trims.hash
+	  prop_hash(:content_removing_trims)
     end
 
     def content_removing_trims
@@ -21,7 +13,7 @@ module ERBGrammar
     end
 
     def to_s(indent_level=0)
-      Tab * indent_level + result
+      to_s_with_prefix(indent_level, result)
     end
   end
 end

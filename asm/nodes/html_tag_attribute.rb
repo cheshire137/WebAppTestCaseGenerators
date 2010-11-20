@@ -1,19 +1,11 @@
 module ERBGrammar
   class HTMLTagAttribute < Treetop::Runtime::SyntaxNode
-    attr_accessor :index
-
 	def ==(other)
-	  return false unless super(other)
-      name == other.name && value == other.value
+	  super(other) && prop_eql?(other, :name, :value)
 	end
 
-    def eql?(other)
-      return false unless other.is_a?(self.class)
-	  self == other
-    end
-
     def hash
-      name.hash ^ value.hash
+	  prop_hash(:name, :value)
     end
 
     def name
@@ -29,7 +21,7 @@ module ERBGrammar
     end
 
     def to_s(indent_level=0)
-      sprintf("%s%s => %s", Tab * indent_level, name, value)
+	  sprintf("%s => %s", name, value)
     end
   end
 end

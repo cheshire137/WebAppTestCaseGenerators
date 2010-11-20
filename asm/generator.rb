@@ -7,5 +7,5 @@ unless ARGV.length == 1
 end
 
 erb = IO.readlines(ARGV.first).join
-ast = Parser.new.parse(erb)
+ast = Parser.new.parse_and_compress(erb)
 pp ast

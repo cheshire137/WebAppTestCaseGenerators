@@ -1,10 +1,7 @@
 module ERBGrammar
   class HTMLSelfClosingTag < Treetop::Runtime::SyntaxNode
-    attr_accessor :index
-
 	def ==(other)
-	  return false unless super(other)
-      name == other.name && attributes_str == other.attributes_str
+	  super(other) && prop_eql?(other, :name, :attributes_str)
 	end
 
 	def attributes
@@ -15,13 +12,8 @@ module ERBGrammar
       attrs.empty? ? '' : attrs.to_s
     end
 
-    def eql?(other)
-      return false unless other.is_a?(self.class)
-	  self == other
-    end
-
     def hash
-      name.hash ^ attributes_str.hash
+	  prop_hash(:name, :attributes_str)
     end
 
     def name
@@ -33,7 +25,7 @@ module ERBGrammar
     end
 
     def to_s(indent_level=0)
-      Tab * indent_level + sprintf("%s %s", name, attributes_str)
+	  to_s_with_prefix(indent_level, name + ' ' + attributes_str)
     end
   end
 end

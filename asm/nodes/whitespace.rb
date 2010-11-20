@@ -1,9 +1,7 @@
 module ERBGrammar
   class Whitespace < Treetop::Runtime::SyntaxNode
-	attr_accessor :index
-
 	def to_s(indent_level=0)
-	  Tab * indent_level
+      to_s_with_prefix(indent_level)
 	end
   end
 end
