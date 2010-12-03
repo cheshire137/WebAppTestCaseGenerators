@@ -17,8 +17,10 @@ class Parser
     tree.initialize_nodes_and_indices()
 	#puts "Pairing HTML tags..."
 	#tree.pair_tags
-	#puts "Finding Ruby code units..."
-	#tree.find_code_units
+	puts "Finding Ruby code units..."
+	tree.find_code_units
+    tree.identify_atomic_sections()
+    tree.nest_atomic_sections()
     tree
   end
 

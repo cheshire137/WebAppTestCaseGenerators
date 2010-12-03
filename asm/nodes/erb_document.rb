@@ -1,116 +1,130 @@
 require 'rubygems'
 require 'ruby_parser'
 require 'atomic_section.rb'
+require 'range.rb'
 
 module ERBGrammar
   class ERBDocument < Treetop::Runtime::SyntaxNode
-	include Enumerable
-	attr_reader :nodes, :initialized_nodes
-	@@parser = RubyParser.new
+    include Enumerable
+    attr_reader :nodes, :initialized_nodes, :atomic_sections
+    @@parser = RubyParser.new
 
-	def [](obj)
-	  if obj.is_a?(Fixnum)
-		each_with_index do |el, i|
-		  return el if el.index == obj || i == obj
-		end
-	  elsif obj.respond_to?(:include?)
-		i = 0
-		select do |el|
-		  is_nil = el.index.nil?
-		  index_match = !is_nil && obj.include?(el.index)
-		  i_match = is_nil && obj.include?(i)
-		  result = index_match || i_match
-		  i += 1
-		  result
-		end
-	  else
-		nil
-	  end
-	end
-
-	def compress_content
-	  # Need to go in reverse lest we end up end up with unnested content
-	  (length-1).downto(0) do |i|
-		element = self[i]
-		next unless element.respond_to?(:close) &&
-					!element.close.nil? &&
-					element.respond_to?(:content)
-		# element is open tag
-		range = element.index+1...element.close.index
-		content = self[range].compact
-		next if content.nil? || content.empty?
-		element.content = content.dup 
-		content.each do |consumed_el|
-		  delete_node_check_size(consumed_el)
-		end
-		# Closing element is not part of the content, but it no longer
-		# needs to appear as a separate element in the tree
-		delete_node_check_size(element.close)
-	  end
-	end
-
-	def each
-	  if @initialized_nodes
-		@nodes.each { |n| yield n }
-	  else
-		yield node
-		if !x.nil? && x.respond_to?(:each)
-		  x.each { |other| yield other }
-		end
-	  end
-	end
-
-	def find_code_units
-	  code_elements = ERBDocument.extract_ruby_code_elements(@nodes)
-	  ERBDocument.find_code_units(code_elements)
-	end
-
-	def get_atomic_sections
-      section = AtomicSection.new(1)
-      sections = []
-      create_section = lambda do |cur_sec|
-        sections << cur_sec
-        AtomicSection.new(cur_sec.count+1)
+    def [](obj)
+      if obj.is_a?(Fixnum)
+        each_with_index do |el, i|
+          return el if el.index == obj || i == obj
+        end
+      elsif obj.respond_to?(:include?)
+        i = 0
+        select do |el|
+          is_nil = el.index.nil?
+          index_match = !is_nil && obj.include?(el.index)
+          i_match = is_nil && obj.include?(i)
+          result = index_match || i_match
+          i += 1
+          result
+        end
+      else
+        nil
       end
-      each do |child_node|
-        if child_node.browser_output?
-          unless section.try_add_node?(child_node)
-            section = create_section.call(section)
-            section.try_add_node?(child_node)
-          end
-        elsif section.nodes.length > 0
-          section = create_section.call(section)
+    end
+
+    def compress_content
+      # Need to go in reverse lest we end up end up with unnested content
+      (length-1).downto(0) do |i|
+        element = self[i]
+        next unless element.respond_to?(:close) &&
+                    !element.close.nil? &&
+                    element.respond_to?(:content)
+        # element is open tag
+        range = element.index+1...element.close.index
+        content = self[range].compact
+        next if content.nil? || content.empty?
+        element.content = content.dup 
+        content.each do |consumed_el|
+          delete_node_check_size(consumed_el)
+        end
+        # Closing element is not part of the content, but it no longer
+        # needs to appear as a separate element in the tree
+        delete_node_check_size(element.close)
+      end
+    end
+
+    def each
+      if @initialized_nodes
+        @nodes.each { |n| yield n }
+      else
+        yield node
+        if !x.nil? && x.respond_to?(:each)
+          x.each { |other| yield other }
         end
       end
-      # Be sure to get the last section appended if it was a valid one,
-      # like in the case of an ERBDocument with a single node
-      sections << section if section.nodes.length > 0
-      sections
+    end
+
+    def find_code_units
+      code_elements = ERBDocument.extract_ruby_code_elements(@nodes)
+      ERBDocument.find_code_units(code_elements)
+    end
+
+    def identify_atomic_sections
+      @atomic_sections = get_atomic_sections()
     end
 
     def initialize_nodes_and_indices
       @initialized_nodes = false
-	  @nodes = []
+      @nodes = []
       each_with_index do |element, i|
         next unless element.respond_to? :index
-		@nodes << element
+        @nodes << element
         element.index = i
       end
-	  @initialized_nodes = true
+      @initialized_nodes = true
     end
 
     def inspect
-      to_s
+      details = (@atomic_sections || []) + (@nodes || [])
+      details.sort! do |a, b|
+        a.range <=> b.range
+      end
+      atomic_sections_covered = []
+      details.collect do |section_or_node|
+        cur_range = section_or_node.range
+        if atomic_sections_covered.include?(cur_range.begin)
+          nil
+        else
+          atomic_sections_covered += cur_range.to_a
+          section_or_node.to_s
+        end
+      end.compact.join("\n")
     end
 
-	# Returns the number of HTML, ERB, and text nodes in this document
-	def length
-	  if @initialized_nodes
-		@nodes.length
-	  else
-		1 + (x.respond_to?(:length) ? x.length : 0)
-	  end
-	end
+    # Returns the number of HTML, ERB, and text nodes in this document
+    def length
+      if @initialized_nodes
+        @nodes.length
+      else
+        1 + (x.respond_to?(:length) ? x.length : 0)
+      end
+    end
+
+    def nest_atomic_sections
+      code_units = select do |el|
+        ERBTag == el.class && !el.content.nil? && !el.content.empty?
+      end
+      return if code_units.empty?
+      (@atomic_sections.length-1).downto(0) do |i|
+        section = @atomic_sections[i]
+        section_range = section.range
+        parent_code = code_units.find do |code_unit|
+          code_range = code_unit.range
+          code_range.include?(section_range.begin) && code_range.include?(section_range.end)
+        end
+        unless parent_code.nil?
+          parent_code.add_atomic_section(section)
+          @atomic_sections.delete_at(i)
+        end
+      end
+    end
 
     def pair_tags
       mateless = []
@@ -135,60 +149,84 @@ module ERBGrammar
     end
 
     def to_s(indent_level=0)
-	  map(&:to_s).select { |str| !str.blank? }.join("\n")
+      map(&:to_s).select { |str| !str.blank? }.join("\n")
     end
 
-	private
-	  def delete_node_check_size(node_to_del)
-		size_before = @nodes.length
-		del_node_str = node_to_del.to_s
-		@nodes.delete(node_to_del)
-		if size_before - @nodes.length > 1
-		  raise "Deleted more than one node equaling\n" + del_node_str
-		end
-	  end
-	  def ERBDocument.extract_ruby_code_elements(nodes)
-		code_els = []
-		code_classes = [ERBTag, ERBOutputTag]
-		nodes.each do |el|
-		  code_els << el if code_classes.include? el.class
-		  if el.respond_to?(:content) && !(content = el.content).nil?
-			# Recursively check content of this node for other code elements
-			code_els += extract_ruby_code_elements(content)
-		  end
-		end
-		code_els
-	  end
+    private
+      def delete_node_check_size(node_to_del)
+        size_before = @nodes.length
+        del_node_str = node_to_del.to_s
+        @nodes.delete(node_to_del)
+        if size_before - @nodes.length > 1
+          raise "Deleted more than one node equaling\n" + del_node_str
+        end
+      end
 
-	  def ERBDocument.find_code_units(code_elements)
-		num_elements = code_elements.length
-		start_index = 0
-		end_index = 0
-		while end_index < num_elements
-		  range = start_index..end_index
-		  unit_elements = code_elements[range]
-		  unit_lines = unit_elements.map(&:ruby_code)
-		  end_index += 1
-		  begin
-			sexp = @@parser.parse(unit_lines.join("\n"))
-			setup_code_unit(unit_elements, sexp)
-			start_index = end_index
-		  rescue Racc::ParseError
-		  end
-		end
-	  end
+      def get_atomic_sections
+        section = AtomicSection.new
+        sections = []
+        create_section = lambda do |cur_sec|
+          sections << cur_sec
+          AtomicSection.new(cur_sec.count+1)
+        end
+        each do |child_node|
+          if child_node.browser_output?
+            unless section.try_add_node?(child_node)
+              section = create_section.call(section)
+              section.try_add_node?(child_node)
+            end
+          elsif section.nodes.length > 0
+            section = create_section.call(section)
+          end
+        end
+        # Be sure to get the last section appended if it was a valid one,
+        # like in the case of an ERBDocument with a single node
+        sections << section if section.nodes.length > 0
+        sections
+      end
 
-	  def ERBDocument.setup_code_unit(unit_elements, sexp)
-		len = unit_elements.length
+      def ERBDocument.extract_ruby_code_elements(nodes)
+        code_els = []
+        code_classes = [ERBTag, ERBOutputTag]
+        nodes.each do |el|
+          code_els << el if code_classes.include? el.class
+          if el.respond_to?(:content) && !(content = el.content).nil?
+            # Recursively check content of this node for other code elements
+            code_els += extract_ruby_code_elements(content)
+          end
+        end
+        code_els
+      end
+
+      def ERBDocument.find_code_units(code_elements)
+        num_elements = code_elements.length
+        start_index = 0
+        end_index = 0
+        while end_index < num_elements
+          range = start_index..end_index
+          unit_elements = code_elements[range]
+          unit_lines = unit_elements.map(&:ruby_code)
+          end_index += 1
+          begin
+            sexp = @@parser.parse(unit_lines.join("\n"))
+            setup_code_unit(unit_elements, sexp)
+            start_index = end_index
+          rescue Racc::ParseError
+          end
+        end
+      end
+
+      def ERBDocument.setup_code_unit(unit_elements, sexp)
+        len = unit_elements.length
         return if len < 2
-		opening = unit_elements.first
-		unless opening.is_a? ERBTag
-		  raise "Expected opening element of code unit to be an ERBTag"
-		end
-		opening.close = unit_elements.last
-		opening.content = unit_elements[1...len-1]
-		opening.sexp = sexp
-		find_code_units(opening.content)
-	  end
+        opening = unit_elements.first
+        unless opening.is_a? ERBTag
+          raise "Expected opening element of code unit to be an ERBTag"
+        end
+        opening.close = unit_elements.last
+        opening.content = unit_elements[1...len-1]
+        opening.sexp = sexp
+        find_code_units(opening.content)
+      end
   end
 end
