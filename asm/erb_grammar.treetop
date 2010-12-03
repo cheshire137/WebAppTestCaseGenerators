@@ -7,7 +7,11 @@ grammar ERBGrammar
   end
 
   rule node
-    erb_output / erb / html_doctype / html_directive / html_self_closing_tag / html_close_tag / html_open_tag / text
+    erb_yield / erb_output / erb / html_doctype / html_directive / html_self_closing_tag / html_close_tag / html_open_tag / text
+  end
+
+  rule erb_yield
+    '<%=' whitespace 'yield' whitespace erb_close_bracket <ERBYield>
   end
  
   rule erb_output
@@ -23,9 +27,7 @@ grammar ERBGrammar
   end
 
   rule newline
-    [\n\r] {
-      attr_accessor :index
-    }
+    [\n\r]
   end
 
   rule ruby_code
@@ -33,9 +35,7 @@ grammar ERBGrammar
   end
 
   rule tab
-    "\t" {
-      attr_accessor :index
-    }
+    "\t"
   end
 
   rule whitespace
@@ -63,9 +63,7 @@ grammar ERBGrammar
   end
 
   rule html_doctype
-    '<!DOCTYPE' [^>]* '>' {
-      attr_accessor :index
-    }
+    '<!DOCTYPE' [^>]* '>' <HTMLDoctype>
   end
   
   rule html_directive
@@ -82,8 +80,6 @@ grammar ERBGrammar
 
   rule quoted_value
     (('"' val:([^"]*) '"') / ('\'' val:([^']*) '\'')) {
-      attr_accessor :index
-
       def convert
         extract_erb(val.text_value)
       end
@@ -111,7 +107,7 @@ grammar ERBGrammar
       end
 
       def to_s(indent_level=0)
-        Tab * indent_level + val.text_value
+        to_s_with_prefix(indent_level, val.text_value)
       end
     }
   end

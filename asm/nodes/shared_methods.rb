@@ -35,39 +35,3 @@ module SharedMethods
 	sprintf("%s%d%s: %s", prefix * indent_level, @index, close_str, suffix)
   end
 end
-
-module SharedERBMethods
-  def ==(other)
-	super(other) && prop_eql?(other, :code)
-  end
-
-  def hash
-	prop_hash(:code)
-  end
-
-  def ruby_code
-	code.content_removing_trims
-  end
-end
-
-module SharedOpenTagMethods
-  def close_str(indent_level=0)
-	@close.nil? ? '' : @close.to_s(indent_level)
-  end
-
-  def content_str(indent_level=0)
-	if @content.nil?
-	  ''
-	else
-	  @content.collect do |el|
-		el.to_s(indent_level)
-	  end.join("\n") + "\n"
-	end + close_str(indent_level)
-  end
-end
-
-module SharedHTMLTagMethods
-  def opposite_type_same_name?(opp_type, other)
-	!other.nil? && other.is_a?(opp_type) && name == other.name
-  end
-end

@@ -1,5 +1,6 @@
 require 'rubygems'
 require 'ruby_parser'
+require 'atomic_section.rb'
 
 module ERBGrammar
   class ERBDocument < Treetop::Runtime::SyntaxNode
@@ -61,11 +62,39 @@ module ERBGrammar
 
 	def find_code_units
 	  code_elements = ERBDocument.extract_ruby_code_elements(@nodes)
-	  #puts '-----------------------'
-	  #puts "Code lines:\n" + code_elements.map(&:ruby_code).join("\n")
-	  #puts '-----------------------'
 	  ERBDocument.find_code_units(code_elements)
 	end
+
+	def get_atomic_sections
+      sections = []
+      section = AtomicSection.new(1)
+      each do |child_node|
+        puts "For atomic section #{section.count}, looking at #{child_node}"
+        if section.try_add_node?(child_node)
+          puts 'Successfully added to atomic section'
+        else
+          puts 'Could not add node, creating new atomic section'
+          sections << section
+          section = AtomicSection.new(section.count+1)
+          unless section.try_add_node?(child_node)
+            raise "Could not add node #{child_node} to empty atomic section"
+          end
+        end
+        puts ''
+      end
+      sections
+    end
+
+    def initialize_nodes_and_indices
+      @initialized_nodes = false
+	  @nodes = []
+      each_with_index do |element, i|
+        next unless element.respond_to? :index
+		@nodes << element
+        element.index = i
+      end
+	  @initialized_nodes = true
+    end
 
     def inspect
       to_s
@@ -81,13 +110,8 @@ module ERBGrammar
 	end
 
     def pair_tags
-	  @initialized_nodes = false
-	  @nodes = []
       mateless = []
       each_with_index do |element, i|
-        next unless element.respond_to? :index
-		@nodes << element
-        element.index = i
         next unless element.respond_to? :pair_match?
         # Find first matching mate for this element in the array of mateless
         # elements.  First matching mate will be latest added element.
@@ -105,7 +129,6 @@ module ERBGrammar
           end
         end
       end
-	  @initialized_nodes = true
     end
 
     def to_s(indent_level=0)
@@ -154,9 +177,7 @@ module ERBGrammar
 
 	  def ERBDocument.setup_code_unit(unit_elements, sexp)
 		len = unit_elements.length
-		if len < 2
-		  return
-		end
+        return if len < 2
 		opening = unit_elements.first
 		unless opening.is_a? ERBTag
 		  raise "Expected opening element of code unit to be an ERBTag"

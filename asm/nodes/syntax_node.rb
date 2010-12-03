@@ -2,6 +2,8 @@ module ERBGrammar
   class Treetop::Runtime::SyntaxNode
     include Enumerable
 	include SharedMethods
+	PlainHTMLTypes = [HTMLOpenTag, HTMLCloseTag, Whitespace, Text].freeze
+	BrowserOutputTypes = (PlainHTMLTypes + [ERBOutputTag]).freeze
     attr_accessor :index
 	alias_method :old_to_s, :to_s
 
@@ -33,8 +35,18 @@ module ERBGrammar
 	  end
 	end
 
+	def browser_output?
+	  BrowserOutputTypes.include?(self.class)
+	end
+	
 	def length
 	  nonterminal? ? elements.length : 0
+	end
+
+	def same_atomic_section?(other)
+      return false if other.nil? || @index.nil? || other.index.nil?
+	  index_diff = (@index - other.index).abs
+	  PlainHTMLTypes.include?(self.class) && PlainHTMLTypes.include?(other.class) && 1 == index_diff
 	end
 
 	# Thanks to https://github.com/aarongough/koi-reference-parser/blob/

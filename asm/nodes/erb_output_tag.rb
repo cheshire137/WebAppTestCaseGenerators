@@ -7,7 +7,7 @@ module ERBGrammar
     end
 
     def to_s(indent_level=0)
-	  to_s_with_prefix(indent_level, '<%=' + ruby_code + '%>')
+	  to_s_with_prefix(indent_level, '<%= ' + ruby_code)
     end
   end
 end
