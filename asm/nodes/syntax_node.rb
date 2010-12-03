@@ -46,7 +46,7 @@ module ERBGrammar
 	def same_atomic_section?(other)
       return false if other.nil? || @index.nil? || other.index.nil?
 	  index_diff = (@index - other.index).abs
-	  PlainHTMLTypes.include?(self.class) && PlainHTMLTypes.include?(other.class) && 1 == index_diff
+	  BrowserOutputTypes.include?(self.class) && BrowserOutputTypes.include?(other.class) && 1 == index_diff
 	end
 
 	# Thanks to https://github.com/aarongough/koi-reference-parser/blob/

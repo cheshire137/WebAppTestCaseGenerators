@@ -7,6 +7,8 @@ class AtomicSection
   end
 
   def can_add_node?(node)
+    return false if node.nil?
+    return false unless node.browser_output?
     return true if @nodes.empty?
     last_node = @nodes.last
 	last_node.same_atomic_section?(node) && last_node != node

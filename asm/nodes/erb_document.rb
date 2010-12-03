@@ -66,22 +66,25 @@ module ERBGrammar
 	end
 
 	def get_atomic_sections
-      sections = []
       section = AtomicSection.new(1)
-      each do |child_node|
-        puts "For atomic section #{section.count}, looking at #{child_node}"
-        if section.try_add_node?(child_node)
-          puts 'Successfully added to atomic section'
-        else
-          puts 'Could not add node, creating new atomic section'
-          sections << section
-          section = AtomicSection.new(section.count+1)
-          unless section.try_add_node?(child_node)
-            raise "Could not add node #{child_node} to empty atomic section"
-          end
-        end
-        puts ''
+      sections = []
+      create_section = lambda do |cur_sec|
+        sections << cur_sec
+        AtomicSection.new(cur_sec.count+1)
       end
+      each do |child_node|
+        if child_node.browser_output?
+          unless section.try_add_node?(child_node)
+            section = create_section.call(section)
+            section.try_add_node?(child_node)
+          end
+        elsif section.nodes.length > 0
+          section = create_section.call(section)
+        end
+      end
+      # Be sure to get the last section appended if it was a valid one,
+      # like in the case of an ERBDocument with a single node
+      sections << section if section.nodes.length > 0
       sections
     end
 

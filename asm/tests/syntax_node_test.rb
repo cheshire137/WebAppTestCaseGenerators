@@ -40,6 +40,8 @@ class SyntaxNodeTest < Test::Unit::TestCase
       erb_tag_2 = doc[24]
       assert_equal erb_tag_1.class, ERBTag
       assert_equal erb_tag_2.class, ERBTag
+      assert !erb_tag_1.browser_output?
+      assert !erb_tag_2.browser_output?
       {:html_tags => [html_tag_1, html_tag_2, html_tag_3],
        :erb_output_tags => [output_tag_1, output_tag_2],
        :erb_tags => [erb_tag_1, erb_tag_2]}
