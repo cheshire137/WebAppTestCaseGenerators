@@ -22,6 +22,7 @@ module ERBGrammar
 
     # p -> p1{p2} (file inclusion, function calls in p1)
     def aggregation?
+      return false if @sexp.nil?
       # TODO: will this ever be true?  is yield/render ever in an ERBTag?
       false
     end
@@ -42,15 +43,20 @@ module ERBGrammar
 
     # p -> p1 | p2 (conditionals)
     def selection?
-      return true if ERBTag.code_has_conditional?(@sexp)
-      return true if !@close.nil? && ERBTag.code_has_conditional?(@close.sexp)
+      return false if @sexp.nil?
+      [:if, :case, :when].each do |key_word|
+        return true if @sexp.include?(key_word)
+      end
       false
     end
 
     # p -> p1* (loops)
     def iteration?
-      return true if ERBTag.code_has_loop?(@sexp)
-      return true if !@close.nil? && ERBTag.code_has_loop?(@close.sexp)
+      return false if @sexp.nil?
+      [:while, :for, :until].each do |key_word|
+        return true if @sexp.include?(key_word)
+      end
+      return true if ERBTag.sexp_include_call?(@sexp, :each)
       false
     end
 
@@ -60,19 +66,20 @@ module ERBGrammar
     end
 
     private
-      def self.code_has_conditional?(sexp)
-        return false if sexp.nil?
-        [:if, :case, :when].each do |key_word|
-          return true if sexp.include?(key_word)
+      def self.sexp_include_call?(sexp, method_name)
+        # e.g., sexp =
+        # s(:iter,
+        #   s(:call, s(:ivar, :@names), :each, s(:arglist)),
+        #   s(:lasgn, :blah),
+        #   s(:call, nil, :puts, s(:arglist, s(:lvar, :blah))))
+        return false if sexp.nil? || method_name.nil? || !sexp.is_a?(Enumerable)
+        #puts "Looking at:"
+        #pp sexp
+        if :call == sexp.first && (!sexp[1].nil? && method_name == sexp[1][2] || method_name == sexp[2])
+          true
+        else
+          sexp_include_call?(sexp[1], method_name)
         end
-      end
-
-      def self.code_has_loop?(sexp)
-        return false if sexp.nil?
-        [:iter, :while, :for, :until].each do |key_word|
-          return true if sexp.include?(key_word)
-        end
-        false
       end
   end
 end

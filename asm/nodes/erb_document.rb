@@ -65,7 +65,7 @@ module ERBGrammar
 
     def find_code_units
       code_elements = ERBDocument.extract_ruby_code_elements(@content)
-      ERBDocument.find_code_units(code_elements)
+      ERBDocument.find_code_units(code_elements, @content)
     end
 
     def get_atomic_sections_recursive(nodes=[])
@@ -86,7 +86,7 @@ module ERBGrammar
       @atomic_sections = create_atomic_sections()
     end
 
-    def initialize_nodes_and_indices
+    def initialize_content_and_indices
       @initialized_content = false
       @content = []
       each_with_index do |element, i|
@@ -191,13 +191,13 @@ module ERBGrammar
               section = create_section.call(section)
               section.try_add_node?(child_node)
             end
-          elsif section.nodes.length > 0
+          elsif section.content.length > 0
             section = create_section.call(section)
           end
         end
         # Be sure to get the last section appended if it was a valid one,
         # like in the case of an ERBDocument with a single node
-        sections << section if section.nodes.length > 0
+        sections << section if section.content.length > 0
         sections
       end
 
@@ -222,7 +222,7 @@ module ERBGrammar
         code_els
       end
 
-      def self.find_code_units(code_elements)
+      def self.find_code_units(code_elements, content)
         num_elements = code_elements.length
         start_index = 0
         end_index = 0
@@ -233,33 +233,39 @@ module ERBGrammar
           end_index += 1
           begin
             sexp = @@parser.parse(unit_lines.join("\n"))
-            puts "Lines of code: " + unit_lines.join("\n")
-            puts "Sexp: " + sexp.inspect
-            puts ''
-            setup_code_unit(unit_elements, sexp)
+            #puts "Lines of code: " + unit_lines.join("\n")
+            #puts "Sexp: " + sexp.inspect
+            #puts ''
+            setup_code_unit(unit_elements, sexp, content)
             start_index = end_index
           rescue Racc::ParseError
           end
         end
       end
 
-      def self.setup_code_unit(unit_elements, sexp)
+      def self.setup_code_unit(unit_elements, sexp, content)
         len = unit_elements.length
-        return if len < 2
+        if len < 1
+          raise "Woah, how can I set up a code unit with no lines of code?"
+        end
         opening = unit_elements.first
         unless opening.is_a? ERBTag
           raise "Expected opening element of code unit to be an ERBTag"
         end
-        opening.close = unit_elements.last
-        opening.content = unit_elements[1...len-1]
         opening.sexp = sexp
+        return if len < 2
+        opening.close = unit_elements.last
+        included_content = content.select do |el|
+          el.index > opening.index && el.index < opening.close.index
+        end
+        opening.content = included_content
         opening.content.each do |el|
           if el.respond_to?(:sexp) && el.sexp.nil?
             el.sexp = sexp
           end
         end
         opening.close.sexp = sexp if opening.close.sexp.nil?
-        find_code_units(extract_ruby_code_elements(opening.content))
+        find_code_units(extract_ruby_code_elements(opening.content), opening.content)
       end
   end
 end

@@ -2,7 +2,7 @@ module ERBGrammar
   class Treetop::Runtime::SyntaxNode
     include Enumerable
     include SharedMethods
-    PlainHTMLTypes = [HTMLDirective, HTMLOpenTag, HTMLCloseTag, Whitespace, Text].freeze
+    PlainHTMLTypes = [HTMLDirective, HTMLOpenTag, HTMLCloseTag, Whitespace, Text, HTMLDoctype, HTMLQuotedValue, HTMLSelfClosingTag, HTMLTagAttribute].freeze
     BrowserOutputTypes = (PlainHTMLTypes + [ERBOutputTag]).freeze
     attr_accessor :index
     alias_method :old_to_s, :to_s

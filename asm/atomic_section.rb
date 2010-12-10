@@ -1,9 +1,9 @@
 class AtomicSection
   include SharedMethods
-  attr_reader :nodes, :count, :index
+  attr_reader :content, :count, :index
 
   def initialize(count=1)
-	@nodes = []
+	@content = []
 	@count = count
     @index = -1
   end
@@ -11,8 +11,8 @@ class AtomicSection
   def can_add_node?(node)
     return false if node.nil?
     return false unless node.browser_output?
-    return true if @nodes.empty?
-    last_node = @nodes.last
+    return true if @content.empty?
+    last_node = @content.last
 	last_node.same_atomic_section?(node) && last_node != node
   end
 
@@ -21,18 +21,18 @@ class AtomicSection
   end
 
   def range
-    return nil if @nodes.nil? || @nodes.empty?
-    @nodes.sort! do |a, b|
+    return nil if @content.nil? || @content.empty?
+    @content.sort! do |a, b|
       a.index <=> b.index
     end
-    start_index = @nodes.first.index
-    end_index = @nodes.last.index
+    start_index = @content.first.index
+    end_index = @content.last.index
     (start_index..end_index)
   end
 
   def save(file_path)
     File.open(file_path, 'w') do |file|
-      @nodes.each do |node|
+      @content.each do |node|
         file.puts node.text_value
       end
     end
@@ -42,15 +42,15 @@ class AtomicSection
 	to_s_with_prefix(indent_level, sprintf("Atomic Section #%d (indices %s):\n%s",
       @count,
       range().to_s,
-      @nodes.collect do |node|
+      @content.collect do |node|
         node.to_s(indent_level+1)
       end.join("\n")))
   end
 
   def try_add_node?(node)
 	if can_add_node?(node)
-      @index = node.index if @nodes.empty?
-	  @nodes << node
+      @index = node.index if @content.empty?
+	  @content << node
 	  true
 	else
 	  false
