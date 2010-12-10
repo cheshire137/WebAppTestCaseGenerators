@@ -4,21 +4,33 @@ require File.join(base_path, 'test_helper.rb')
 
 class ERBDocumentTest < Test::Unit::TestCase
   def test_delete_node
-	doc = Parser.new.parse(fixture('login_index.html'))
+	doc = Parser.new.parse(fixture('login_index.html'), 'login_index.html.erb')
 	assert_not_nil doc
 	li = doc[6]
 	assert_not_nil li
 	assert_equal "ERBGrammar::HTMLOpenTag", li.class.name
 	assert_equal 'li', li.name
 	old_length = doc.length
-	deleted_node = doc.nodes.delete(li)
+	deleted_node = doc.content.delete(li)
+    assert_equal li, deleted_node, "Expected returned deleted_node to match li"
 	assert_not_equal li, doc[6], "New node in index 6 should not be the same as the one we just deleted"
 	new_length = doc.length
 	assert_equal old_length-1, new_length, "New length of ERBDocument should be 1 less than old length"
   end
 
+  def test_nested_atomic_section
+    doc = Parser.new.parse(fixture('_finished.html'), '_finished.html.erb')
+    assert_not_nil doc
+    if_winner = doc[0]
+    assert_not_nil if_winner
+    assert_equal "ERBGrammar::ERBTag", if_winner.class.name
+    assert_not_nil if_winner.content
+    sections = if_winner.get_sections_and_nodes().select { |n| n.is_a?(AtomicSection) }
+    assert_equal 2, sections.length
+  end
+
   def test_square_bracket_accessor_fixnum
-	doc = Parser.new.parse(fixture('login_index.html'))
+	doc = Parser.new.parse(fixture('login_index.html'), 'login_index.html.erb')
 	assert_not_nil doc
 	form = doc[0]
 	assert_not_nil form
@@ -36,7 +48,7 @@ class ERBDocumentTest < Test::Unit::TestCase
   end
 
   def test_square_bracket_accessor_range
-	doc = Parser.new.parse(fixture('login_index.html'))
+	doc = Parser.new.parse(fixture('login_index.html'), 'login_index.html.erb')
 	assert_not_nil doc
 	elements = doc[0..1]
 	assert_equal Array, elements.class, "Expected Array return value"
@@ -48,7 +60,7 @@ class ERBDocumentTest < Test::Unit::TestCase
   end
 
   def test_square_bracket_accessor_range2
-	doc = Parser.new.parse(fixture('login_index.html'))
+	doc = Parser.new.parse(fixture('login_index.html'), 'login_index.html.erb')
 	assert_not_nil doc
 	elements = doc[14...15].compact
 	assert_equal Array, elements.class
@@ -57,7 +69,7 @@ class ERBDocumentTest < Test::Unit::TestCase
   end
 
   def test_length
-	doc = Parser.new.parse(fixture('login_index.html'))
+	doc = Parser.new.parse(fixture('login_index.html'), 'login_index.html.erb')
 	assert_not_nil doc
 	assert_equal 25, doc.length,
 	  "ERB document has 25 different HTML, ERB, and text nodes, #length should return this"

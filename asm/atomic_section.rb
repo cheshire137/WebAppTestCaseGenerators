@@ -16,6 +16,10 @@ class AtomicSection
 	last_node.same_atomic_section?(node) && last_node != node
   end
 
+  def component_expression(prev_state=nil)
+    sprintf("p%d", @count)
+  end
+
   def range
     return nil if @nodes.nil? || @nodes.empty?
     @nodes.sort! do |a, b|

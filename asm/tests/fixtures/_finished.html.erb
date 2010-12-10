@@ -1,0 +1,21 @@
+<% #Check the state of the game and write out the winners, losers, and drawers.
+   #Then display the final scores.
+   if @winner %>
+	<% if @winner.id == session[:user][:id] %>
+		<p class="game_result_positive">You won!</p>
+	<% else %>
+		<p class="game_result_negative"><%= @winner.email %> won!</p>
+	<% end %>
+<% end %>
+<% unless @drawers.empty? %>
+	<p><%= @drawers.map(&:email).to_sentence %> tied.</p>
+<% end %>
+<% unless @losers.empty? %>
+	<p><%= @losers.map(&:email).to_sentence %> lost the game.</p>
+<% end %>
+<h2>Final Scores</h2>
+<ul>
+	<% @game.get_sorted_scores(true).each do |score| %>
+		<li><%= score.user.email %> - <%= score.score %></li>
+	<% end %>
+</ul>

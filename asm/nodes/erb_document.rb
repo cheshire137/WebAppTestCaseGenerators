@@ -6,8 +6,8 @@ require 'range.rb'
 module ERBGrammar
   class ERBDocument < Treetop::Runtime::SyntaxNode
     include Enumerable
-    ERBCodeTypeNames = ["ERBTag", "ERBOutputTag"]
-    attr_reader :nodes, :initialized_nodes, :atomic_sections
+    include SharedAtomicSectionMethods
+    attr_reader :content, :initialized_content
     attr_accessor :source_file
     @@parser = RubyParser.new
 
@@ -53,8 +53,8 @@ module ERBGrammar
     end
 
     def each
-      if @initialized_nodes
-        @nodes.each { |n| yield n }
+      if @initialized_content
+        @content.each { |n| yield n }
       else
         yield node
         if !x.nil? && x.respond_to?(:each)
@@ -64,7 +64,7 @@ module ERBGrammar
     end
 
     def find_code_units
-      code_elements = ERBDocument.extract_ruby_code_elements(@nodes)
+      code_elements = ERBDocument.extract_ruby_code_elements(@content)
       ERBDocument.find_code_units(code_elements)
     end
 
@@ -83,41 +83,30 @@ module ERBGrammar
     end
 
     def identify_atomic_sections
-      @atomic_sections = get_atomic_sections()
+      @atomic_sections = create_atomic_sections()
     end
 
     def initialize_nodes_and_indices
-      @initialized_nodes = false
-      @nodes = []
+      @initialized_content = false
+      @content = []
       each_with_index do |element, i|
         next unless element.respond_to? :index
-        @nodes << element
+        @content << element
         element.index = i
       end
-      @initialized_nodes = true
+      @initialized_content = true
     end
 
     def inspect
-      atomic_sections_covered = []
-      details = (@atomic_sections || []) + (@nodes || [])
-      details.sort! { |a, b| a.range <=> b.range }
       file_details = sprintf("Source file: %s", @source_file)
-      sections = details.collect do |section_or_node|
-        cur_range = section_or_node.range
-        if atomic_sections_covered.include?(cur_range.begin)
-          nil
-        else
-          atomic_sections_covered += cur_range.to_a
-          section_or_node.to_s
-        end
-      end.compact
+      sections = get_sections_and_nodes(:to_s)
       sprintf("%s\n%s", file_details, sections.join("\n"))
     end
 
     # Returns the number of HTML, ERB, and text nodes in this document
     def length
-      if @initialized_nodes
-        @nodes.length
+      if @initialized_content
+        @content.length
       else
         1 + (x.respond_to?(:length) ? x.length : 0)
       end
@@ -133,7 +122,8 @@ module ERBGrammar
         section_range = section.range
         parent_code = code_units.find do |code_unit|
           code_range = code_unit.range
-          code_range.include?(section_range.begin) && code_range.include?(section_range.end)
+          code_range.include?(section_range.begin) &&
+            code_range.include?(section_range.end)
         end
         unless parent_code.nil?
           parent_code.add_atomic_section(section)
@@ -165,7 +155,7 @@ module ERBGrammar
     end
 
     def save_atomic_sections(base_dir='.')
-      all_sections = get_atomic_sections_recursive((@atomic_sections || []) + (@nodes || []))
+      all_sections = get_atomic_sections_recursive((@atomic_sections || []) + (@content || []))
       if all_sections.nil? || all_sections.empty?
         raise "No atomic sections to write to file"
       end
@@ -188,16 +178,7 @@ module ERBGrammar
     end
 
     private
-      def delete_node_check_size(node_to_del)
-        size_before = @nodes.length
-        del_node_str = node_to_del.to_s
-        @nodes.delete(node_to_del)
-        if size_before - @nodes.length > 1
-          raise "Deleted more than one node equaling\n" + del_node_str
-        end
-      end
-
-      def get_atomic_sections
+      def create_atomic_sections
         section = AtomicSection.new
         sections = []
         create_section = lambda do |cur_sec|
@@ -220,10 +201,19 @@ module ERBGrammar
         sections
       end
 
-      def ERBDocument.extract_ruby_code_elements(nodes)
+      def delete_node_check_size(node_to_del)
+        size_before = @content.length
+        del_node_str = node_to_del.to_s
+        @content.delete(node_to_del)
+        if size_before - @content.length > 1
+          raise "Deleted more than one node equaling\n" + del_node_str
+        end
+      end
+
+      def self.extract_ruby_code_elements(nodes)
         code_els = []
         nodes.each do |el|
-          code_els << el if ERBCodeTypeNames.include? el.class.name
+          code_els << el if el.class == ERBTag
           if el.respond_to?(:content) && !(content = el.content).nil?
             # Recursively check content of this node for other code elements
             code_els += extract_ruby_code_elements(content)
@@ -232,7 +222,7 @@ module ERBGrammar
         code_els
       end
 
-      def ERBDocument.find_code_units(code_elements)
+      def self.find_code_units(code_elements)
         num_elements = code_elements.length
         start_index = 0
         end_index = 0
@@ -243,6 +233,9 @@ module ERBGrammar
           end_index += 1
           begin
             sexp = @@parser.parse(unit_lines.join("\n"))
+            puts "Lines of code: " + unit_lines.join("\n")
+            puts "Sexp: " + sexp.inspect
+            puts ''
             setup_code_unit(unit_elements, sexp)
             start_index = end_index
           rescue Racc::ParseError
@@ -250,7 +243,7 @@ module ERBGrammar
         end
       end
 
-      def ERBDocument.setup_code_unit(unit_elements, sexp)
+      def self.setup_code_unit(unit_elements, sexp)
         len = unit_elements.length
         return if len < 2
         opening = unit_elements.first
@@ -260,7 +253,13 @@ module ERBGrammar
         opening.close = unit_elements.last
         opening.content = unit_elements[1...len-1]
         opening.sexp = sexp
-        find_code_units(opening.content)
+        opening.content.each do |el|
+          if el.respond_to?(:sexp) && el.sexp.nil?
+            el.sexp = sexp
+          end
+        end
+        opening.close.sexp = sexp if opening.close.sexp.nil?
+        find_code_units(extract_ruby_code_elements(opening.content))
       end
   end
 end

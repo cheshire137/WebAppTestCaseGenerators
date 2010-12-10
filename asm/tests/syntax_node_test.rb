@@ -15,8 +15,8 @@ class SyntaxNodeTest < Test::Unit::TestCase
     nodes[:erb_tags][0].index = 4
     nodes[:erb_output_tags][1].index = 5
     nodes[:erb_tags][1].index = 6
-    assert !nodes[:html_tags][0].same_atomic_section?(nodes[:erb_output_tags][0])
-    assert !nodes[:erb_output_tags][0].same_atomic_section?(nodes[:html_tags][1])
+    assert nodes[:html_tags][0].same_atomic_section?(nodes[:erb_output_tags][0])
+    assert nodes[:erb_output_tags][0].same_atomic_section?(nodes[:html_tags][1])
     assert nodes[:html_tags][1].same_atomic_section?(nodes[:html_tags][2])
     assert !nodes[:html_tags][2].same_atomic_section?(nodes[:erb_tags][0])
     assert !nodes[:erb_tags][0].same_atomic_section?(nodes[:erb_output_tags][1])
@@ -25,7 +25,7 @@ class SyntaxNodeTest < Test::Unit::TestCase
 
   private
     def get_test_nodes
-      doc = Parser.new.parse(fixture('login_index.html'))
+      doc = Parser.new.parse(fixture('login_index.html'), 'login_index.html.erb')
       html_tag_1 = doc[6]
       html_tag_2 = doc[7]
       html_tag_3 = doc[9]
