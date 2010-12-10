@@ -26,6 +26,14 @@ class AtomicSection
     (start_index..end_index)
   end
 
+  def save(file_path)
+    File.open(file_path, 'w') do |file|
+      @nodes.each do |node|
+        file.puts node.text_value
+      end
+    end
+  end
+
   def to_s(indent_level=0)
 	to_s_with_prefix(indent_level, sprintf("Atomic Section #%d (indices %s):\n%s",
       @count,

@@ -8,7 +8,7 @@ Treetop.load(File.join(base_path, 'erb_grammar.treetop'))
 class Parser
   @@parser = ERBGrammarParser.new
 
-  def parse(data)
+  def parse(data, file_name)
 	puts "Parsing ERB file with Treetop parser..."
     tree = @@parser.parse data
     if tree.nil?
@@ -21,6 +21,7 @@ class Parser
 	tree.find_code_units
     tree.identify_atomic_sections()
     tree.nest_atomic_sections()
+    tree.source_file = file_name
     tree
   end
 

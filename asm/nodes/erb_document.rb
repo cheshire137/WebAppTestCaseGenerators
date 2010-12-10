@@ -6,7 +6,9 @@ require 'range.rb'
 module ERBGrammar
   class ERBDocument < Treetop::Runtime::SyntaxNode
     include Enumerable
+    ERBCodeTypeNames = ["ERBTag", "ERBOutputTag"]
     attr_reader :nodes, :initialized_nodes, :atomic_sections
+    attr_accessor :source_file
     @@parser = RubyParser.new
 
     def [](obj)
@@ -66,6 +68,20 @@ module ERBGrammar
       ERBDocument.find_code_units(code_elements)
     end
 
+    def get_atomic_sections_recursive(nodes=[])
+      sections = []
+      nodes.each do |node|
+        sections << node if node.is_a?(AtomicSection)
+        if node.respond_to?(:content) && !node.content.nil?
+          sections += get_atomic_sections_recursive(node.content)
+        end
+        if node.respond_to?(:atomic_sections) && !node.atomic_sections.nil?
+          sections += node.atomic_sections
+        end
+      end
+      sections
+    end
+
     def identify_atomic_sections
       @atomic_sections = get_atomic_sections()
     end
@@ -82,12 +98,11 @@ module ERBGrammar
     end
 
     def inspect
-      details = (@atomic_sections || []) + (@nodes || [])
-      details.sort! do |a, b|
-        a.range <=> b.range
-      end
       atomic_sections_covered = []
-      details.collect do |section_or_node|
+      details = (@atomic_sections || []) + (@nodes || [])
+      details.sort! { |a, b| a.range <=> b.range }
+      file_details = sprintf("Source file: %s", @source_file)
+      sections = details.collect do |section_or_node|
         cur_range = section_or_node.range
         if atomic_sections_covered.include?(cur_range.begin)
           nil
@@ -95,7 +110,8 @@ module ERBGrammar
           atomic_sections_covered += cur_range.to_a
           section_or_node.to_s
         end
-      end.compact.join("\n")
+      end.compact
+      sprintf("%s\n%s", file_details, sections.join("\n"))
     end
 
     # Returns the number of HTML, ERB, and text nodes in this document
@@ -148,6 +164,25 @@ module ERBGrammar
       end
     end
 
+    def save_atomic_sections(base_dir='.')
+      all_sections = get_atomic_sections_recursive((@atomic_sections || []) + (@nodes || []))
+      if all_sections.nil? || all_sections.empty?
+        raise "No atomic sections to write to file"
+      end
+      dir_name = sprintf("atomic_sections-%s",
+        File.basename(@source_file).gsub(/\./, '_'))
+      dir_path = File.join(base_dir, dir_name)
+      puts sprintf("Creating directory %s...", dir_path)
+      Dir.mkdir(dir_path)
+      all_sections.collect do |section|
+        file_name = sprintf("%04d.txt", section.count)
+        file_path = File.join(dir_path, file_name)
+        puts sprintf("Writing atomic section to file %s...", file_name)
+        section.save(file_path)
+        file_path
+      end
+    end
+
     def to_s(indent_level=0)
       map(&:to_s).select { |str| !str.blank? }.join("\n")
     end
@@ -187,9 +222,8 @@ module ERBGrammar
 
       def ERBDocument.extract_ruby_code_elements(nodes)
         code_els = []
-        code_classes = [ERBTag, ERBOutputTag]
         nodes.each do |el|
-          code_els << el if code_classes.include? el.class
+          code_els << el if ERBCodeTypeNames.include? el.class.name
           if el.respond_to?(:content) && !(content = el.content).nil?
             # Recursively check content of this node for other code elements
             code_els += extract_ruby_code_elements(content)

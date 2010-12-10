@@ -6,6 +6,10 @@ unless ARGV.length == 1
   exit
 end
 
-erb = IO.readlines(ARGV.first).join
-ast = Parser.new.parse(erb)
+file_name = ARGV.first
+erb = IO.readlines(file_name).join
+ast = Parser.new.parse(erb, file_name)
 pp ast
+puts '--------------------------'
+root_dir = File.expand_path(File.dirname(__FILE__))
+files = ast.save_atomic_sections(root_dir)
