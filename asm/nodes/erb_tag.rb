@@ -61,8 +61,10 @@ module ERBGrammar
     end
 
     def to_s(indent_level=0)
+      sections = get_sections_and_nodes(:to_s, indent_level+1)
       to_s_with_prefix(indent_level,
-        sprintf("%s\n%s", ruby_code, atomic_section_str(indent_level+1)))
+        sprintf("%s\n%s\n%s", ruby_code, sections.join("\n"),
+                close_str(indent_level+1)))
     end
 
     private

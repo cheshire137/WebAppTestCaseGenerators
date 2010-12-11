@@ -112,26 +112,6 @@ module ERBGrammar
       end
     end
 
-    def nest_atomic_sections
-      code_units = select do |el|
-        ERBTag == el.class && !el.content.nil? && !el.content.empty?
-      end
-      return if code_units.empty?
-      (@atomic_sections.length-1).downto(0) do |i|
-        section = @atomic_sections[i]
-        section_range = section.range
-        parent_code = code_units.find do |code_unit|
-          code_range = code_unit.range
-          code_range.include?(section_range.begin) &&
-            code_range.include?(section_range.end)
-        end
-        unless parent_code.nil?
-          parent_code.add_atomic_section(section)
-          @atomic_sections.delete_at(i)
-        end
-      end
-    end
-
     def pair_tags
       mateless = []
       each_with_index do |element, i|

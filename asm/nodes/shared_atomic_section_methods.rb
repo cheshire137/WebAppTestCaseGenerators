@@ -33,7 +33,7 @@ module SharedAtomicSectionMethods
     end
   end
 
-  def get_sections_and_nodes(method_sym_to_call=nil)
+  def get_sections_and_nodes(method_sym_to_call=nil, *args)
     atomic_sections_covered = []
     should_call_method = !method_sym_to_call.nil?
     details = (@atomic_sections || []) + (@content || [])
@@ -54,16 +54,37 @@ module SharedAtomicSectionMethods
     end
     details.collect do |section_or_node|
       cur_range = section_or_node.range
-      if atomic_sections_covered.include?(cur_range.begin) && !section_or_node.is_a?(AtomicSection)
+      if atomic_sections_covered.include?(cur_range.begin)# && !section_or_node.is_a?(AtomicSection)
         nil
       else
         atomic_sections_covered += cur_range.to_a
         if should_call_method
-          section_or_node.send(method_sym_to_call)
+          section_or_node.send(method_sym_to_call, *args)
         else
           section_or_node
         end
       end
     end.compact
+  end
+
+  def nest_atomic_sections
+    code_units = @content.select do |el|
+      "ERBGrammar::ERBTag" == el.class.name && !el.content.nil? && !el.content.empty?
+    end
+    return if code_units.empty?
+    (@atomic_sections.length-1).downto(0) do |i|
+      section = @atomic_sections[i]
+      section_range = section.range
+      parent_code = code_units.find do |code_unit|
+        code_range = code_unit.range
+        code_range.include?(section_range.begin) &&
+          code_range.include?(section_range.end)
+      end
+      unless parent_code.nil?
+        parent_code.add_atomic_section(section)
+        @atomic_sections.delete_at(i)
+        parent_code.nest_atomic_sections
+      end
+    end
   end
 end
