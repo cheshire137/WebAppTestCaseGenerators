@@ -1,35 +1,37 @@
 module SharedAtomicSectionMethods
   attr_reader :atomic_sections
 
-  def component_expression(prev_state=nil)
-    if self.class.name == "ERBGrammar::ERBTag"
-      cur_state = if iteration?
-                    :iter
-                  elsif selection?
-                    :sel
-                  elsif aggregation?
-                    :aggr
-                  else
-                    nil
-                  end
+  def get_current_state
+    if respond_to?(:iteration?) && iteration?
+      :iter
+    elsif respond_to?(:selection?) && selection?
+      :sel
+    elsif respond_to?(:aggregation?) && aggregation?
+      :aggr
     else
-      cur_state = nil
+      nil
     end
-    child_expr = get_sections_and_nodes().select do |node|
-      node.respond_to?(:component_expression)
-    end.collect do |node|
-      node.component_expression(cur_state).gsub(/\(\|/, '|').gsub(/\|\(/, ')(').gsub(/\.\|\./, '|')
-    end.select { |expr| !expr.blank? }.join('.')
-    case cur_state
-      when :iter:
-        sprintf("(%s)*", child_expr)
-      when :sel:
-        sprintf("(%s|", child_expr)
-      when :aggr:
-        # TODO: yield/render stuff handled differently?
-        sprintf("(___{%s})", child_expr)
+  end
+
+  def component_expression
+    children = get_sections_and_nodes()
+    child_str = children.collect do |node|
+      if node.respond_to?(:component_expression)
+        node.component_expression()
       else
-        child_expr.gsub(/\|\./, ').').gsub(/\|$/, ')')
+        nil
+      end
+    end.compact.join('.')
+    case get_current_state()
+    when :iter:
+      sprintf("(%s)*", child_str)
+    when :sel:
+      get_selection_component_expression(children)
+    when :aggr:
+      # TODO: yield/render stuff handled differently?
+      sprintf("(___{%s})", child_str)
+    else
+      child_str
     end
   end
 
@@ -65,6 +67,19 @@ module SharedAtomicSectionMethods
         end
       end
     end.compact
+  end
+
+  def get_selection_component_expression(children, sections_used=[])
+    return '' if children.nil? || children.empty?
+    section_exprs = children.select do |child|
+      child.respond_to?(:component_expression)
+    end.map(&:component_expression).select do |expr|
+      !expr.blank?
+    end
+    if section_exprs.length < 2
+      section_exprs << 'NULL'
+    end
+    '(' + section_exprs.join('|') + ')'
   end
 
   def nest_atomic_sections

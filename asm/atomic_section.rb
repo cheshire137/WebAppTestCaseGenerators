@@ -16,7 +16,7 @@ class AtomicSection
 	last_node.same_atomic_section?(node) && last_node != node
   end
 
-  def component_expression(prev_state=nil)
+  def component_expression
     sprintf("p%d", @count)
   end
 
