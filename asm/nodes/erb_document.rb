@@ -193,7 +193,7 @@ module ERBGrammar
       def self.extract_ruby_code_elements(nodes)
         code_els = []
         nodes.each do |el|
-          code_els << el if el.class == ERBTag
+          code_els << el if RubyCodeTypes.include?(el.class)
           if el.respond_to?(:content) && !(content = el.content).nil?
             # Recursively check content of this node for other code elements
             code_els += extract_ruby_code_elements(content)
@@ -209,6 +209,7 @@ module ERBGrammar
         while end_index < num_elements
           range = start_index..end_index
           unit_elements = code_elements[range]
+#          pp unit_elements.map(&:class).map(&:name)
           unit_lines = unit_elements.map(&:ruby_code)
           end_index += 1
           begin

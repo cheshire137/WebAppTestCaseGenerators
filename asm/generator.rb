@@ -12,5 +12,6 @@ ast = Parser.new.parse(erb, file_name)
 pp ast
 puts '--------------------'
 puts ast.component_expression()
+
 #root_dir = File.expand_path(File.dirname(__FILE__))
 #files = ast.save_atomic_sections(root_dir)

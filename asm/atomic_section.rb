@@ -17,7 +17,22 @@ class AtomicSection
   end
 
   def component_expression
-    sprintf("p%d", @count)
+    default_expr = sprintf("p%d", @count)
+    unless @content.nil? || @content.empty?
+      child_str = @content.collect do |node|
+        if node.respond_to?(:component_expression)
+          node.component_expression()
+        else
+          nil
+        end
+      end.compact.join('.')
+      return child_str unless child_str.blank?
+    end
+    default_expr
+  end
+
+  def inspect
+    to_s
   end
 
   def range
@@ -51,6 +66,9 @@ class AtomicSection
 	if can_add_node?(node)
       @index = node.index if @content.empty?
 	  @content << node
+      if node.respond_to?(:atomic_section_count)
+        node.atomic_section_count = @count
+      end
 	  true
 	else
 	  false
