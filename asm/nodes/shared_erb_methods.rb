@@ -101,8 +101,16 @@ module SharedERBMethods
 
   def selection_true_case?(exp_true_sexp)
     outer_sexp = sexp
-    return false if s.nil? || !selection?
+    if s.nil? || !selection?
+      puts "Returning false"
+      puts "s.nil? " + s.nil?().to_s
+      puts "!selection? " + (!selection?).to_s
+      return false
+    end
     true_case = sexp[2]
+    #puts "Looking for "
+    #pp exp_true_sexp
+    #puts ''
     !true_case.nil? && true_case.include?(exp_true_sexp)
   end
 

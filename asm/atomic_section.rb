@@ -1,3 +1,4 @@
+require File.join('nodes', 'fake_erb_output.rb')
 class AtomicSection
   include SharedMethods
   attr_reader :content, :count, :index
@@ -29,6 +30,18 @@ class AtomicSection
       return child_str unless child_str.blank?
     end
     default_expr
+  end
+
+  def include?(node)
+    return false if @content.nil? || @content.empty?
+    return false if node.nil?
+    if node.is_a?(ERBGrammar::FakeERBOutput)
+      @content.collect do |content_node|
+        ERBGrammar::FakeERBOutput.new(content_node)
+      end
+    else
+      @content
+    end.include?(node)
   end
 
   def inspect

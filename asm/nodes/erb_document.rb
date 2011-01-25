@@ -193,7 +193,12 @@ module ERBGrammar
       def self.extract_ruby_code_elements(nodes)
         code_els = []
         nodes.each do |el|
-          code_els << el if RubyCodeTypes.include?(el.class)
+          if RubyCodeTypes.include?(el.class)
+            code_els << el
+          else
+            #puts "Converting type " + el.class.name + " to FakeERBOutput"
+            code_els << FakeERBOutput.new(el)
+          end
           if el.respond_to?(:content) && !(content = el.content).nil?
             # Recursively check content of this node for other code elements
             code_els += extract_ruby_code_elements(content)
@@ -209,13 +214,14 @@ module ERBGrammar
         while end_index < num_elements
           range = start_index..end_index
           unit_elements = code_elements[range]
-#          pp unit_elements.map(&:class).map(&:name)
+          #pp unit_elements.map(&:class).map(&:name)
           unit_lines = unit_elements.map(&:ruby_code)
           end_index += 1
           begin
             sexp = @@parser.parse(unit_lines.join("\n"))
             #puts "Lines of code: " + unit_lines.join("\n")
-            #puts "Sexp: " + sexp.inspect
+            #puts "Sexp: "
+            #pp sexp
             #puts ''
             setup_code_unit(unit_elements, sexp, content)
             start_index = end_index
@@ -230,23 +236,25 @@ module ERBGrammar
           raise "Woah, how can I set up a code unit with no lines of code?"
         end
         opening = unit_elements.first
-        unless opening.is_a? ERBTag
-          raise "Expected opening element of code unit to be an ERBTag"
-        end
-        opening.sexp = sexp
+        opening.sexp = sexp if opening.respond_to?('sexp=')
         return if len < 2
-        opening.close = unit_elements.last
+        opening_tag_has_close = opening.respond_to?(:close)
+        opening.close = unit_elements.last if opening_tag_has_close
         included_content = content.select do |el|
-          el.index > opening.index && el.index < opening.close.index
+          el.index > opening.index && (!opening_tag_has_close || el.index < opening.close.index)
         end
-        opening.content = included_content
-        opening.content.each do |el|
-          if el.respond_to?(:sexp) && el.sexp.nil?
-            el.sexp = sexp
+        if opening_tag_has_close && opening.close.sexp.nil?
+          opening.close.sexp = sexp
+        end
+        if opening.respond_to?(:content)
+          opening.content = included_content
+          opening.content.each do |el|
+            if el.respond_to?('sexp=') && el.sexp.nil?
+              el.sexp = sexp
+            end
           end
+          find_code_units(extract_ruby_code_elements(opening.content), opening.content)
         end
-        opening.close.sexp = sexp if opening.close.sexp.nil?
-        find_code_units(extract_ruby_code_elements(opening.content), opening.content)
       end
   end
 end
