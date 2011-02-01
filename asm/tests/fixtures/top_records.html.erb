@@ -1,0 +1,18 @@
+<div class="left_column">
+	<% #Get the best/worst results from the outcomes table and write them out for viewing.
+	   if @wins.empty? %>
+		<p>No player has won a game.</p>
+	<% else %>
+		<h2 class="no_space_above">Top <%= @limit %> Winners</h2>
+		<ol><%= render :partial => 'top_list', :collection => @wins, :as => :outcome %></ol>
+	<% end %>
+</div>
+<div class="right_column">
+	<% if @losses.empty? %>
+		<p>No player has lost a game.</p>
+	<% else %>
+		<h2 class="no_space_above">Top <%= @limit %> Losers</h2>
+		<ol><%= render :partial => 'top_list', :collection => @losses, :as => :outcome %></ol>
+	<% end %>
+</div>
+<!-- p1.(p2|(p3{p4}p5)).p6.(p7|(p8{p9}p10)).p11 -->

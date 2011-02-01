@@ -8,6 +8,7 @@ class SyntaxNodeTest < Test::Unit::TestCase
   
   def test_same_atomic_section?
 	nodes = get_test_nodes()
+    # Impose our own order on the elements in the document:
     nodes[:html_tags][0].index = 0
     nodes[:erb_output_tags][0].index = 1
     nodes[:html_tags][1].index = 2
@@ -15,10 +16,11 @@ class SyntaxNodeTest < Test::Unit::TestCase
     nodes[:erb_tags][0].index = 4
     nodes[:erb_output_tags][1].index = 5
     nodes[:erb_tags][1].index = 6
+
     assert nodes[:html_tags][0].same_atomic_section?(nodes[:erb_output_tags][0])
     assert nodes[:erb_output_tags][0].same_atomic_section?(nodes[:html_tags][1])
     assert nodes[:html_tags][1].same_atomic_section?(nodes[:html_tags][2])
-    assert !nodes[:html_tags][2].same_atomic_section?(nodes[:erb_tags][0])
+    assert !nodes[:html_tags][2].same_atomic_section?(nodes[:erb_tags][0]), "Expected following to not be in same atomic section:\n(#{nodes[:html_tags][2].class.name}) " + nodes[:html_tags][2].to_s + "\n\n(#{nodes[:erb_tags][0].class.name}) " + nodes[:erb_tags][0].to_s
     assert !nodes[:erb_tags][0].same_atomic_section?(nodes[:erb_output_tags][1])
     assert !nodes[:erb_output_tags][1].same_atomic_section?(nodes[:erb_tags][1])
   end

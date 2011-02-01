@@ -189,10 +189,30 @@ module SharedSexpMethods
   def iteration?
     set_sexp() if @sexp.nil?
     return false if :invalid_ruby == @sexp
-    [:while, :for, :until].each do |keyword|
-      return true if self.class.sexp_outer_keyword?(@sexp, keyword)
+    # For cases like the following sexp:
+    # s(:iter,
+    #  s(:call,
+    #   s(:call, s(:ivar, :@game), :get_sorted_scores, s(:arglist, s(:true))),
+    #   :each,
+    #   s(:arglist)),
+    #  s(:lasgn, :score))
+    if self.class.sexp_outer_keyword?(@sexp, :iter) &&
+       self.class.sexp_outer_call?(@sexp[1], :each)
+      #puts "Sexp has a call to :each in iterator--iteration!\n"
+      return true
     end
-    return true if self.class.sexp_outer_call?(@sexp, :each)
+    [:while, :for, :until].each do |keyword|
+#      puts "Looking for key word '" + keyword.to_s + "' in "
+#      pp @sexp
+      if self.class.sexp_outer_keyword?(@sexp, keyword)
+#        puts "Found it!\n"
+        return true
+      end
+    end
+    if self.class.sexp_outer_call?(@sexp, :each)
+#      puts "Sexp has a call to :each--iteration!\n"
+      return true 
+    end
     false
   end
 

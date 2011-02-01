@@ -34,6 +34,8 @@ module ERBGrammar
     end
 
     def component_expression
+      cur_state = get_current_state()
+      return selection_component_expression() if :sel == cur_state
       children = get_sections_and_nodes()
       child_str = children.collect do |node|
         if node.respond_to?(:component_expression)
@@ -42,87 +44,12 @@ module ERBGrammar
           nil
         end
       end.compact.join('.')
-      case get_current_state()
+      case cur_state
       when :iter:
-        sprintf("(%s)*", child_str)
-      when :sel:
-        old_code = <<HERE
-        puts "From perspective of " + self.to_s
-        puts ''
-        puts "Children:"
-        pp children
-        puts ''
-        erb = children.select do |node|
-          node.is_a?(ERBTag)
-        end
-        sections = children.select do |node|
-          node.is_a?(AtomicSection)
-        end
-        #puts "ERB:"
-        #pp erb
-        #puts "\nAtomicSections:"
-        #pp sections
-        #puts ''
-        if sections.empty?
-        elsif 1 == sections.length
-          sprintf("(%s|NULL)", sections.first.component_expression)
-        else
-          true_kids, false_kids = nodes_to_atomic_section_content(sections)
-          #puts "True kids:"
-          #pp true_kids
-          #puts ''
-          #puts "False kids:"
-          #pp false_kids
-          #puts "\n---------------"
-          true_sections = content_to_atomic_sections(true_kids, sections)
-          false_sections = content_to_atomic_sections(false_kids, sections)
-          #puts "True sections:"
-          #pp true_sections
-          #puts ''
-          #puts "False sections:"
-          #pp false_sections
-          #puts "\n******************"
-          check_true_and_false_sections(true_sections, false_sections)
-          true_expr = true_sections.map(&:component_expression).join('.')
-          false_expr = false_sections.map(&:component_expression).join('.')
-          if true_sections.empty?
-            sprintf("(NULL|%s)", false_expr)
-          elsif false_sections.empty?
-            sprintf("(%s|NULL)", true_expr)
-          else
-            sprintf("(%s|%s)", true_expr, false_expr)
-          end
-        end
-HERE
-        if respond_to?(:true_content) && respond_to?(:false_content)
-          if @true_content.nil? || @false_content.nil?
-            "Has split branch, but no @true_content or no @false_content is set"
-          else
-            is_true_single = true_content.length <= 1
-            is_false_single = false_content.length <= 1
-            opening_true_paren = is_true_single ? '' : '('
-            closing_true_paren = is_true_single ? '' : ')'
-            opening_false_paren = is_false_single ? '' : '('
-            closing_false_paren = is_false_single ? '' : ')'
-            true_branch = case true_content.length
-                          when 0
-                            'NULL'
-                          else
-                            true_content.map(&:component_expression).join('.')
-                          end
-            false_branch = case false_content.length
-                           when 0
-                             'NULL'
-                           else
-                             false_content.map(&:component_expression).join('.')
-                           end
-            sprintf("(%s%s%s|%s%s%s)", opening_true_paren, true_branch,
-                    closing_true_paren, opening_false_paren, false_branch,
-                    closing_false_paren)
-          end
-        else
-          "No split branch for " + self.class.name
-        end
+        has_single_child = 1 == children.length
+        open_paren = has_single_child ? '' : '('
+        close_paren = has_single_child ? '' : ')'
+        sprintf("%s%s%s*", open_paren, child_str, close_paren)
       when :aggr:
         if respond_to?(:atomic_section_count) && children.empty?
           sprintf("{p%s}", atomic_section_count)
@@ -206,6 +133,38 @@ HERE
     end
 
     private
+      def selection_component_expression
+        if respond_to?(:true_content) && respond_to?(:false_content)
+          if @true_content.nil? || @false_content.nil?
+            "Has split branch, but no @true_content or no @false_content is set"
+          else
+            is_true_single = true_content.length <= 1
+            is_false_single = false_content.length <= 1
+            opening_true_paren = is_true_single ? '' : '('
+            closing_true_paren = is_true_single ? '' : ')'
+            opening_false_paren = is_false_single ? '' : '('
+            closing_false_paren = is_false_single ? '' : ')'
+            true_branch = case true_content.length
+                          when 0
+                            'NULL'
+                          else
+                            true_content.map(&:component_expression).join('.')
+                          end
+            false_branch = case false_content.length
+                           when 0
+                             'NULL'
+                           else
+                             false_content.map(&:component_expression).join('.')
+                           end
+            sprintf("(%s%s%s|%s%s%s)", opening_true_paren, true_branch,
+                    closing_true_paren, opening_false_paren, false_branch,
+                    closing_false_paren)
+          end
+        else
+          "No split branch for " + self.class.name
+        end
+      end
+
       def nodes_to_atomic_section_content(sections)
         child_section_erb = sections.collect do |section|
           if section.content.nil? || section.content.length < 1

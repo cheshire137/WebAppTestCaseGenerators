@@ -54,9 +54,19 @@ module ERBGrammar
       return false if other.nil? || @index.nil? || other.index.nil?
       index_diff = (@index - other.index).abs
       return false if 1 != index_diff
-      if PlainHTMLTypes.include?(self.class) && PlainHTMLTypes.include?(other.class)
-        return true
-      end
+
+      # If both nodes are just HTML, they can be part of the same atomic
+      # section
+      is_plain_html = PlainHTMLTypes.include?(self.class)
+      other_is_plain_html = PlainHTMLTypes.include?(other.class)
+      return true if is_plain_html && other_is_plain_html
+
+      # If one node is an ERBTag and the other is not, they should not
+      # be in the same atomic section--ERBTags split apart atomic sections
+      is_erb = self.is_a?(ERBTag)
+      other_is_erb = other.is_a?(ERBTag)
+      return false if !is_erb && other_is_erb || is_erb && !other_is_erb
+
       class1_is_output = self.is_a?(ERBOutputTag)
       class2_is_output = other.is_a?(ERBOutputTag)
       if class1_is_output && class2_is_output

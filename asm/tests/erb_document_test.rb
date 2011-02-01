@@ -3,6 +3,30 @@ require File.join(base_path, '..', 'parser.rb')
 require File.join(base_path, 'test_helper.rb')
 
 class ERBDocumentTest < Test::Unit::TestCase
+  def test_form_tag_component_expression
+    doc = Parser.new.parse(fixture('login_index.html'), 'login_index.html.erb')
+    assert_not_nil doc
+    expected = "p1"
+    actual = doc.component_expression()
+    assert_equal expected, actual, "Wrong component expression for login_index"
+  end
+
+  def test_nested_if_and_aggregation_component_expression
+    doc = Parser.new.parse(fixture('top_records.html'), 'top_records.html.erb')
+    assert_not_nil doc
+    expected = "p1.(p2|(p3.{p4}.p5)).p6.(p7|(p8.{p9}.p10)).p11"
+    actual = doc.component_expression()
+    assert_equal expected, actual, "Wrong component expression for top_records"
+  end
+
+  def test_nested_if_and_loop_component_expression
+    doc = Parser.new.parse(fixture('_finished.html'), '_finished.html.erb')
+    assert_not_nil doc
+    expected = "((p1|p2)|NULL).(NULL|p3).(NULL|p4).p5.p6*.p7"    
+    actual = doc.component_expression()
+    assert_equal expected, actual, "Wrong component expression for _finished"
+  end
+
   def test_delete_node
 	doc = Parser.new.parse(fixture('login_index.html'), 'login_index.html.erb')
 	assert_not_nil doc
@@ -21,12 +45,29 @@ class ERBDocumentTest < Test::Unit::TestCase
   def test_nested_atomic_section
     doc = Parser.new.parse(fixture('_finished.html'), '_finished.html.erb')
     assert_not_nil doc
+    # The code in question:
+    # <% #Check the state of the game and write out the winners, losers, and drawers.
+    #    #Then display the final scores.
+    #    if @winner %>
+    #     <% if @winner.id == session[:user][:id] %>
+    #         <p class="game_result_positive">You won!</p>
+    #     <% else %>
+    #         <p class="game_result_negative"><%= @winner.email %> won!</p>
+    #     <% end %>
+    # <% end %>
     if_winner = doc[0]
     assert_not_nil if_winner
-    assert_equal "ERBGrammar::ERBTag", if_winner.class.name
-    assert_not_nil if_winner.content
-    sections = if_winner.get_sections_and_nodes().select { |n| n.is_a?(AtomicSection) }
-    assert_equal 2, sections.length
+    assert_equal "ERBGrammar::ERBTag", if_winner.class.name, "Wrong type of node in slot 0 of ERBDocument"
+    assert_not_nil if_winner.content, "Nil content in if-winner ERBTag"
+    nodes = if_winner.get_sections_and_nodes()
+    assert_equal 1, nodes.length, "Expected one ERBTag child node of if-winner ERBTag"
+    if_winner_equal = nodes.first
+    sections = if_winner_equal.get_sections_and_nodes().select do |child|
+      child.is_a?(AtomicSection)
+    end
+    assert_equal 2, sections.length, "Expected two atomic section children of if-winner-equal ERBTag: " + sections.inspect
+    assert_not_nil if_winner_equal.true_content, "Expected non-nil true_content for if-winner-equal ERBTag"
+    assert_not_nil if_winner_equal.false_content, "Expected non-nil false_content for if-winner-equal ERBTag"
   end
 
   def test_square_bracket_accessor_fixnum

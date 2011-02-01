@@ -22,18 +22,25 @@ class AtomicSection
   end
 
   def component_expression
-    default_expr = sprintf("p%d", @count)
     unless @content.nil? || @content.empty?
+#      puts "Atomic section has content:"
+#      pp @content
+#      puts "---------"
+      # Necessary to check content of atomic section in case it contains an
+      # ERBOutputTag that has a render() call, which would be treated as
+      # aggregation in the component expression
       child_str = @content.collect do |node|
         if node.respond_to?(:component_expression)
           node.component_expression()
         else
           nil
         end
-      end.compact.join('.')
-      return child_str unless child_str.blank?
+      end.compact.select do |expr|
+        !expr.blank?
+      end.join('.')
+      return child_str unless child_str.blank? || '.' == child_str
     end
-    default_expr
+    sprintf("p%d", @count)
   end
 
   def include?(node)
