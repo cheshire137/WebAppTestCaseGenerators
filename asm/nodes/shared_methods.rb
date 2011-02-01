@@ -21,7 +21,7 @@ module SharedMethods
 	property_names << :index unless property_names.include? :index
 	property_names.each do |prop_name|
 	  prop_value = self.send(prop_name)
-	  hash_code = hash_code ^ prop_value unless prop_value.nil?
+	  hash_code = hash_code ^ prop_value.hash unless prop_value.nil?
 	end
 	hash_code
   end

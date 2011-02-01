@@ -2,6 +2,9 @@ module ERBGrammar
   class HTMLOpenTag < Treetop::Runtime::SyntaxNode
 	include SharedOpenTagMethods
 	include SharedHTMLTagMethods
+    include SharedSexpParsing
+    include SharedSexpMethods
+    extend SharedSexpMethods::ClassMethods
     attr_accessor :content, :close
 
 	def ==(other)

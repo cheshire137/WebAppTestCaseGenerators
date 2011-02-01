@@ -2,9 +2,10 @@ module ERBGrammar
   class ERBTag < Treetop::Runtime::SyntaxNode
     include SharedAtomicSectionMethods
     include SharedERBMethods
-    extend SharedERBMethods::ClassMethods
+    include SharedSexpMethods
+    extend SharedSexpMethods::ClassMethods
     include SharedOpenTagMethods
-    attr_accessor :content, :close, :sexp
+    attr_accessor :content, :close, :true_content, :false_content
 
     def atomic_section_str(indent_level=0)
       if @atomic_sections.nil?

@@ -1,6 +1,9 @@
 module ERBGrammar
   class HTMLCloseTag < Treetop::Runtime::SyntaxNode
 	include SharedHTMLTagMethods
+    include SharedSexpParsing
+    include SharedSexpMethods
+    extend SharedSexpMethods::ClassMethods
 
 	def ==(other)
 	  super(other) && prop_eql?(other, :name)

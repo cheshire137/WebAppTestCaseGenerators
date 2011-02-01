@@ -2,9 +2,14 @@ module ERBGrammar
   class ERBOutputTag < Treetop::Runtime::SyntaxNode
     include SharedAtomicSectionMethods
 	include SharedERBMethods
-    extend SharedERBMethods::ClassMethods
+    include SharedSexpMethods
+    extend SharedSexpMethods::ClassMethods
     include SharedSexpParsing
     attr_accessor :atomic_section_count
+
+    def content
+      nil
+    end
 
     def inspect
       sprintf("%s (%d): %s", self.class, @index, ruby_code)

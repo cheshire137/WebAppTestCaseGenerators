@@ -17,10 +17,10 @@ class Parser
     tree.initialize_content_and_indices()
 	#puts "Pairing HTML tags..."
 	#tree.pair_tags
-	puts "Finding Ruby code units..."
-	tree.find_code_units
+	tree.find_code_units()
     tree.identify_atomic_sections()
     tree.nest_atomic_sections()
+    tree.split_branches()
     tree.source_file = file_name
     tree
   end

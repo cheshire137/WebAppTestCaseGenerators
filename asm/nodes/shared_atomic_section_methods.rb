@@ -33,42 +33,6 @@ module ERBGrammar
       end
     end
 
-    def nodes_to_atomic_section_content(sections)
-      child_atom_sec_erb = sections.map(&:content).flatten.collect do |node|
-        if node.respond_to?(:sexp)
-          node
-        else
-          FakeERBOutput.new(node)
-        end
-      end
-      true_kids = child_atom_sec_erb.select do |node|
-        selection_true_case?(node.sexp)
-      end
-      false_kids = child_atom_sec_erb.select do |node|
-        selection_false_case?(node.sexp)
-      end
-      [true_kids, false_kids]
-    end
-
-    def check_true_and_false_sections(true_sections, false_sections)
-      true_set = Set.new(true_sections)
-      false_set = Set.new(false_sections)
-      true_and_false_sections = true_set.intersection(false_set)
-      unless true_and_false_sections.empty?
-        raise RuntimeError, "Should not have the same AtomicSection(s) in " +
-          "both the true and false branch of selection:\n" +
-          true_and_false_sections.to_a.map(&:to_s).join(', ')
-      end
-    end
-
-    def content_to_atomic_sections(content, atomic_sections)
-      content.collect do |node|
-        atomic_sections.select do |section|
-          section.is_a?(AtomicSection) && section.include?(node)
-        end.first
-      end.compact.uniq
-    end
-
     def component_expression
       children = get_sections_and_nodes()
       child_str = children.collect do |node|
@@ -82,27 +46,83 @@ module ERBGrammar
       when :iter:
         sprintf("(%s)*", child_str)
       when :sel:
+        old_code = <<HERE
+        puts "From perspective of " + self.to_s
+        puts ''
+        puts "Children:"
+        pp children
+        puts ''
+        erb = children.select do |node|
+          node.is_a?(ERBTag)
+        end
         sections = children.select do |node|
           node.is_a?(AtomicSection)
         end
-        true_kids, false_kids = nodes_to_atomic_section_content(sections)
-        true_sections = content_to_atomic_sections(true_kids, sections)
-        false_sections = content_to_atomic_sections(false_kids, sections)
-        puts "True kids:"
-        pp true_kids
-        puts ''
-        puts "True kids atomic sections:"
-        pp true_sections
-        puts ''
-        puts ''
-        puts "False kids:"
-        pp false_kids
-        puts ''
-        puts "False kids atomic sections:"
-        pp false_sections
-        puts ''
-        check_true_and_false_sections(true_sections, false_sections)
-        'sel'
+        #puts "ERB:"
+        #pp erb
+        #puts "\nAtomicSections:"
+        #pp sections
+        #puts ''
+        if sections.empty?
+        elsif 1 == sections.length
+          sprintf("(%s|NULL)", sections.first.component_expression)
+        else
+          true_kids, false_kids = nodes_to_atomic_section_content(sections)
+          #puts "True kids:"
+          #pp true_kids
+          #puts ''
+          #puts "False kids:"
+          #pp false_kids
+          #puts "\n---------------"
+          true_sections = content_to_atomic_sections(true_kids, sections)
+          false_sections = content_to_atomic_sections(false_kids, sections)
+          #puts "True sections:"
+          #pp true_sections
+          #puts ''
+          #puts "False sections:"
+          #pp false_sections
+          #puts "\n******************"
+          check_true_and_false_sections(true_sections, false_sections)
+          true_expr = true_sections.map(&:component_expression).join('.')
+          false_expr = false_sections.map(&:component_expression).join('.')
+          if true_sections.empty?
+            sprintf("(NULL|%s)", false_expr)
+          elsif false_sections.empty?
+            sprintf("(%s|NULL)", true_expr)
+          else
+            sprintf("(%s|%s)", true_expr, false_expr)
+          end
+        end
+HERE
+        if respond_to?(:true_content) && respond_to?(:false_content)
+          if @true_content.nil? || @false_content.nil?
+            "Has split branch, but no @true_content or no @false_content is set"
+          else
+            is_true_single = true_content.length <= 1
+            is_false_single = false_content.length <= 1
+            opening_true_paren = is_true_single ? '' : '('
+            closing_true_paren = is_true_single ? '' : ')'
+            opening_false_paren = is_false_single ? '' : '('
+            closing_false_paren = is_false_single ? '' : ')'
+            true_branch = case true_content.length
+                          when 0
+                            'NULL'
+                          else
+                            true_content.map(&:component_expression).join('.')
+                          end
+            false_branch = case false_content.length
+                           when 0
+                             'NULL'
+                           else
+                             false_content.map(&:component_expression).join('.')
+                           end
+            sprintf("(%s%s%s|%s%s%s)", opening_true_paren, true_branch,
+                    closing_true_paren, opening_false_paren, false_branch,
+                    closing_false_paren)
+          end
+        else
+          "No split branch for " + self.class.name
+        end
       when :aggr:
         if respond_to?(:atomic_section_count) && children.empty?
           sprintf("{p%s}", atomic_section_count)
@@ -148,21 +168,6 @@ module ERBGrammar
       end.compact
     end
 
-    def get_selection_component_expression(children)
-      return '' if children.nil? || children.empty?
-  #    puts "Selection with children:"
-      section_exprs = children.select do |child|
-        child.respond_to?(:component_expression)
-      end.map(&:component_expression).select do |expr|
-        !expr.blank?
-      end
-  #    pp section_exprs
-      if section_exprs.length < 2
-        section_exprs << 'NULL'
-      end
-      '(' + section_exprs.join('|') + ')'
-    end
-
     def nest_atomic_sections
       code_units = @content.select do |el|
         "ERBGrammar::ERBTag" == el.class.name && !el.content.nil? && !el.content.empty?
@@ -183,5 +188,58 @@ module ERBGrammar
         end
       end
     end
+
+    def split_branches
+      branch_processor = lambda do |child|
+        if child.respond_to?(:split_branch) && child.respond_to?(:selection?) && child.selection?
+          child.split_branch()
+        end
+      end
+      if is_a?(ERBDocument)
+        each(&branch_processor)
+      else
+        # TODO: should I split innermost branches first, to get nested if's?
+        # Thus should I do branch_processor on @content before self?
+        branch_processor.call(self)
+        @content.each(&branch_processor)
+      end
+    end
+
+    private
+      def nodes_to_atomic_section_content(sections)
+        child_section_erb = sections.collect do |section|
+          if section.content.nil? || section.content.length < 1
+            next
+          end
+          code_lines = section.content.map(&:text_value)
+          FakeERBOutput.new(code_lines, section.content.first.index)
+        end.compact
+        true_kids = child_section_erb.select do |node|
+          selection_true_case?(node.sexp)
+        end
+        false_kids = child_section_erb.select do |node|
+          selection_false_case?(node.sexp)
+        end
+        [true_kids, false_kids]
+      end
+
+      def check_true_and_false_sections(true_sections, false_sections)
+        true_set = Set.new(true_sections)
+        false_set = Set.new(false_sections)
+        true_and_false_sections = true_set.intersection(false_set)
+        unless true_and_false_sections.empty?
+          raise RuntimeError, "Should not have the same AtomicSection(s) in " +
+            "both the true and false branch of selection:\n" +
+            true_and_false_sections.to_a.map(&:to_s).join(', ')
+        end
+      end
+
+      def content_to_atomic_sections(content, atomic_sections)
+        content.collect do |node|
+          atomic_sections.select do |section|
+            section.is_a?(AtomicSection) && section.include?(node)
+          end.first
+        end.compact.uniq
+      end
   end
 end

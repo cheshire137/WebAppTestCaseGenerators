@@ -1,21 +1,29 @@
 module ERBGrammar
   class FakeERBOutput
-    include SharedSexpParsing
+    include SharedSexpMethods
+    extend SharedSexpMethods::ClassMethods
     include SharedMethods
-    attr_reader :node, :index
+    attr_reader :index, :lines_of_code, :content
 
-    def initialize(node)
-      if node.nil?
-        raise ArgumentException, "Given node cannot be nil"
+    def initialize(code, index)
+      if code.is_a?(String)
+        @lines_of_code = [code]
+      elsif code.is_a?(Array)
+        @lines_of_code = code
+      else
+        raise ArgumentError, "Expected String or Array code"
       end
-      @node = node
-      @index = @node.index
+      unless index.is_a?(Fixnum)
+        raise ArgumentError, "Expected Fixnum index"
+      end
+      @content = nil
+      @index = index
     end
 
     def ==(other)
       return false if other.nil?
-      other.respond_to?(:node) && !other.node.nil? &&
-        other.node.text_value == @node.text_value
+      other.respond_to?(:lines_of_code) && !other.lines_of_code.nil? &&
+        other.lines_of_code == @lines_of_code
     end
 
     def inspect
@@ -28,11 +36,13 @@ module ERBGrammar
     # for example, that this particular HTML was within the 'else' portion
     # of an if/else block.
     def ruby_code
-      'puts "' + FakeERBOutput.escape_value(@node.text_value) + '"'
+      @lines_of_code.collect do |code|
+        'puts "' + FakeERBOutput.escape_value(code) + '"'
+      end.join("\n")
     end
 
     def to_s(indent_level=0)
-      to_s_with_prefix(indent_level, "FakeERBOutput " + @node.text_value)
+      to_s_with_prefix(indent_level, "FakeERBOutput " + @lines_of_code.join("\n"))
     end
 
     private

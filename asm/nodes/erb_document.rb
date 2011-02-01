@@ -83,14 +83,31 @@ module ERBGrammar
     end
 
     def identify_atomic_sections
-      @atomic_sections = create_atomic_sections()
+      section = AtomicSection.new
+      @atomic_sections ||= []
+      create_section = lambda do |cur_sec|
+        @atomic_sections << cur_sec
+        AtomicSection.new(cur_sec.count+1)
+      end
+      each do |child_node|
+        if child_node.browser_output?
+          unless section.try_add_node?(child_node)
+            section = create_section.call(section)
+            section.try_add_node?(child_node)
+          end
+        elsif section.content.length > 0
+          section = create_section.call(section)
+        end
+      end
+      # Be sure to get the last section appended if it was a valid one,
+      # like in the case of an ERBDocument with a single node
+      @atomic_sections << section if section.content.length > 0
     end
 
     def initialize_content_and_indices
       @initialized_content = false
       @content = []
       each_with_index do |element, i|
-        next unless element.respond_to? :index
         @content << element
         element.index = i
       end
@@ -158,28 +175,6 @@ module ERBGrammar
     end
 
     private
-      def create_atomic_sections
-        section = AtomicSection.new
-        sections = []
-        create_section = lambda do |cur_sec|
-          sections << cur_sec
-          AtomicSection.new(cur_sec.count+1)
-        end
-        each do |child_node|
-          if child_node.browser_output?
-            unless section.try_add_node?(child_node)
-              section = create_section.call(section)
-              section.try_add_node?(child_node)
-            end
-          elsif section.content.length > 0
-            section = create_section.call(section)
-          end
-        end
-        # Be sure to get the last section appended if it was a valid one,
-        # like in the case of an ERBDocument with a single node
-        sections << section if section.content.length > 0
-        sections
-      end
 
       def delete_node_check_size(node_to_del)
         size_before = @content.length
@@ -197,7 +192,7 @@ module ERBGrammar
             code_els << el
           else
             #puts "Converting type " + el.class.name + " to FakeERBOutput"
-            code_els << FakeERBOutput.new(el)
+            code_els << FakeERBOutput.new(el.text_value, el.index)
           end
           if el.respond_to?(:content) && !(content = el.content).nil?
             # Recursively check content of this node for other code elements
@@ -243,16 +238,16 @@ module ERBGrammar
         included_content = content.select do |el|
           el.index > opening.index && (!opening_tag_has_close || el.index < opening.close.index)
         end
-        if opening_tag_has_close && opening.close.sexp.nil?
-          opening.close.sexp = sexp
-        end
+        #if opening_tag_has_close && opening.close.sexp.nil?
+        #  opening.close.sexp = sexp
+        #end
         if opening.respond_to?(:content)
           opening.content = included_content
-          opening.content.each do |el|
-            if el.respond_to?('sexp=') && el.sexp.nil?
-              el.sexp = sexp
-            end
-          end
+          #opening.content.each do |el|
+            #if el.respond_to?('sexp=') && el.sexp.nil?
+            #  el.sexp = sexp
+            #end
+          #end
           find_code_units(extract_ruby_code_elements(opening.content), opening.content)
         end
       end

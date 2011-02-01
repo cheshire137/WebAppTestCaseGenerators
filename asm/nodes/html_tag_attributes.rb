@@ -1,5 +1,10 @@
 module ERBGrammar
   class HTMLTagAttributes < Treetop::Runtime::SyntaxNode
+    include SharedSexpParsing
+    include SharedSexpMethods
+    extend SharedSexpMethods::ClassMethods
+    include SharedHTMLTagMethods
+
 	def ==(other)
 	  return false unless super(other) && index_eql?(other)
 	  this_arr = to_a

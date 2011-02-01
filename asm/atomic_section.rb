@@ -1,6 +1,9 @@
 require File.join('nodes', 'fake_erb_output.rb')
 class AtomicSection
   include SharedMethods
+  include SharedSexpParsing
+  include SharedSexpMethods
+  extend SharedSexpMethods::ClassMethods
   attr_reader :content, :count, :index
 
   def initialize(count=1)
@@ -12,6 +15,7 @@ class AtomicSection
   def can_add_node?(node)
     return false if node.nil?
     return false unless node.browser_output?
+    return false if node.index.nil?
     return true if @content.empty?
     last_node = @content.last
 	last_node.same_atomic_section?(node) && last_node != node
@@ -36,12 +40,10 @@ class AtomicSection
     return false if @content.nil? || @content.empty?
     return false if node.nil?
     if node.is_a?(ERBGrammar::FakeERBOutput)
-      @content.collect do |content_node|
-        ERBGrammar::FakeERBOutput.new(content_node)
-      end
+      ERBGrammar::FakeERBOutput.new(@content.map(&:text_value), @index) == node
     else
-      @content
-    end.include?(node)
+      @content.include?(node)
+    end
   end
 
   def inspect
@@ -55,7 +57,17 @@ class AtomicSection
     end
     start_index = @content.first.index
     end_index = @content.last.index
+    if start_index.nil? || end_index.nil?
+      raise RuntimeError, "Nil start or end index; atomic section has content: " + @content.inspect
+    end
     (start_index..end_index)
+  end
+
+  # TODO: remove duplication between this and SharedHTMLTagMethods
+  def ruby_code
+    @content.collect do |child|
+      'puts "' + child.text_value.gsub(/"/, "\\\"") + '"'
+    end.join("\n")
   end
 
   def save(file_path)
