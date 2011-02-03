@@ -1,6 +1,7 @@
 require File.join('nodes', 'fake_erb_output.rb')
 class AtomicSection
   include SharedMethods
+  include SharedChildrenMethods
   include SharedSexpParsing
   include SharedSexpMethods
   extend SharedSexpMethods::ClassMethods

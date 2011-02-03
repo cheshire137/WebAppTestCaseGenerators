@@ -1,6 +1,7 @@
 module ERBGrammar
   BasePath = File.expand_path(File.dirname(__FILE__))
   require File.join(BasePath, 'shared_atomic_section_methods.rb')
+  require File.join(BasePath, 'shared_children_methods.rb')
   require File.join(BasePath, 'shared_methods.rb')
   require File.join(BasePath, 'shared_erb_methods.rb')
   require File.join(BasePath, 'shared_html_tag_methods.rb')

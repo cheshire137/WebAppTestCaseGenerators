@@ -7,6 +7,7 @@ module ERBGrammar
   class ERBDocument < Treetop::Runtime::SyntaxNode
     include Enumerable
     include SharedAtomicSectionMethods
+    include SharedChildrenMethods
     attr_reader :content, :initialized_content
     attr_accessor :source_file
     @@parser = RubyParser.new
@@ -68,6 +69,7 @@ module ERBGrammar
       ERBDocument.find_code_units(code_elements, @content)
     end
 
+
     def get_atomic_sections_recursive(nodes=[])
       sections = []
       nodes.each do |node|
@@ -108,6 +110,9 @@ module ERBGrammar
       @initialized_content = false
       @content = []
       each_with_index do |element, i|
+        if element.respond_to?(:parent=)
+          element.parent = self
+        end
         @content << element
         element.index = i
       end
@@ -190,7 +195,7 @@ module ERBGrammar
         nodes.each do |el|
           if RubyCodeTypes.include?(el.class)
             code_els << el
-          else
+          elsif el.respond_to?(:text_value)
             #puts "Converting type " + el.class.name + " to FakeERBOutput"
             code_els << FakeERBOutput.new(el.text_value, el.index)
           end
@@ -204,24 +209,36 @@ module ERBGrammar
 
       def self.find_code_units(code_elements, content)
         num_elements = code_elements.length
-        start_index = 0
-        end_index = 0
-        while end_index < num_elements
-          range = start_index..end_index
-          unit_elements = code_elements[range]
-          #pp unit_elements.map(&:class).map(&:name)
-          unit_lines = unit_elements.map(&:ruby_code)
-          end_index += 1
-          begin
-            sexp = @@parser.parse(unit_lines.join("\n"))
-            #puts "Lines of code: " + unit_lines.join("\n")
-            #puts "Sexp: "
-            #pp sexp
-            #puts ''
-            setup_code_unit(unit_elements, sexp, content)
-            start_index = end_index
-          rescue Racc::ParseError
+        start_index = end_index = 0
+        while start_index < num_elements
+          #puts "Looking at range " + (start_index..end_index).to_s
+          while end_index < num_elements
+            range = start_index..end_index
+            #puts "Looking at range " + range.to_s
+            unit_elements = code_elements[range]
+            #pp unit_elements.map(&:class).map(&:name)
+            unit_lines = unit_elements.map(&:ruby_code)
+            #puts "--Checking code for code unit:"
+            #pp unit_lines
+            #puts "\n"
+            end_index += 1
+            begin
+              sexp = @@parser.parse(unit_lines.join("\n"))
+              #puts "Lines of code: " + unit_lines.join("\n")
+              #puts "Sexp: "
+              #pp sexp
+              #puts ''
+              setup_code_unit(unit_elements, sexp, content)
+              start_index = end_index
+            rescue Racc::ParseError
+            end
           end
+
+          # Once finding an outer code unit, should then check
+          # start_index+1 to end_index-1 and so on inward to see if
+          # any inner, nested code units exist
+          start_index += 1
+          end_index = start_index
         end
       end
 
@@ -232,22 +249,28 @@ module ERBGrammar
         end
         opening = unit_elements.first
         opening.sexp = sexp if opening.respond_to?('sexp=')
-        return if len < 2
+        if len < 2
+          #puts "--Found code unit:"
+          #puts opening
+          return
+        end
         opening_tag_has_close = opening.respond_to?(:close)
         opening.close = unit_elements.last if opening_tag_has_close
         included_content = content.select do |el|
           el.index > opening.index && (!opening_tag_has_close || el.index < opening.close.index)
         end
-        #if opening_tag_has_close && opening.close.sexp.nil?
-        #  opening.close.sexp = sexp
-        #end
-        if opening.respond_to?(:content)
+        #puts "--Found code unit:"
+        #puts opening
+        if opening.respond_to?(:content=)
+          included_content.each do |child|
+            if child.respond_to?(:parent=)
+              child.parent = opening
+            end
+          end
           opening.content = included_content
-          #opening.content.each do |el|
-            #if el.respond_to?('sexp=') && el.sexp.nil?
-            #  el.sexp = sexp
-            #end
-          #end
+          #puts "--Now looking for code units in content:"
+          #puts extract_ruby_code_elements(opening.content).map(&:to_s).join(",\n")
+          #puts "---"
           find_code_units(extract_ruby_code_elements(opening.content), opening.content)
         end
       end

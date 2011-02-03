@@ -18,6 +18,12 @@ module ERBGrammar
       end
     end
 
+    def get_code_units_for_nesting
+      @content.select do |el|
+        "ERBGrammar::ERBTag" == el.class.name && !el.content.nil? && !el.content.empty?
+      end
+    end
+
     def get_current_state
       unless respond_to?(:iteration?) && respond_to?(:aggregation?) && respond_to?(:selection?)
         return nil
@@ -43,7 +49,9 @@ module ERBGrammar
         else
           nil
         end
-      end.compact.join('.')
+      end.compact.select do |expr|
+        !expr.blank?
+      end.join('.')
       case cur_state
       when :iter:
         has_single_child = 1 == children.length
@@ -96,22 +104,33 @@ module ERBGrammar
     end
 
     def nest_atomic_sections
-      code_units = @content.select do |el|
-        "ERBGrammar::ERBTag" == el.class.name && !el.content.nil? && !el.content.empty?
-      end
+      code_units = get_code_units_for_nesting()
       return if code_units.empty?
+      reversed_code_units = code_units.reverse
       (@atomic_sections.length-1).downto(0) do |i|
         section = @atomic_sections[i]
         section_range = section.range
-        parent_code = code_units.find do |code_unit|
+        find_parent_code = lambda do |code_unit|
           code_range = code_unit.range
           code_range.include?(section_range.begin) &&
             code_range.include?(section_range.end)
         end
+        parent_code = code_units.find(&find_parent_code)
         unless parent_code.nil?
+          # Maybe the parent has another child that should actually be
+          # the parent of this atomic section
+          #parent_code_units = parent_code.get_code_units_for_nesting()
+          #if parent_code_units.length > 0
+          #  parent_code = parent_code_units.find(&find_parent_code) || parent_code
+          #end
+          #puts "Adding atomic section"
+          #puts section.to_s
+          #puts "To parent"
+          #puts parent_code.to_s
+          #puts ''
           parent_code.add_atomic_section(section)
           @atomic_sections.delete_at(i)
-          parent_code.nest_atomic_sections
+          parent_code.nest_atomic_sections()
         end
       end
     end
@@ -122,22 +141,26 @@ module ERBGrammar
           child.split_branch()
         end
       end
-      if is_a?(ERBDocument)
-        each(&branch_processor)
-      else
-        # TODO: should I split innermost branches first, to get nested if's?
-        # Thus should I do branch_processor on @content before self?
-        branch_processor.call(self)
-        @content.each(&branch_processor)
-      end
+      # TODO: should I split innermost branches first, to get nested if's?
+      # Thus should I do branch_processor on @content before self?
+      branch_processor.call(self)
+      @content.each(&branch_processor)
     end
 
     private
+
       def selection_component_expression
         if respond_to?(:true_content) && respond_to?(:false_content)
           if @true_content.nil? || @false_content.nil?
             "Has split branch, but no @true_content or no @false_content is set"
           else
+            #puts "Selection with " + self.class.name
+            #pp self
+            #puts "\nTrue content:"
+            #pp @true_content
+            #puts "\nFalse content:"
+            #pp @false_content
+            #puts "--------------"
             is_true_single = true_content.length <= 1
             is_false_single = false_content.length <= 1
             opening_true_paren = is_true_single ? '' : '('
@@ -161,7 +184,9 @@ module ERBGrammar
                     closing_false_paren)
           end
         else
-          "No split branch for " + self.class.name
+          # End up here when, for example, there's an if statement within an ERBOutputTag,
+          # e.g., <%= (user.id == session[:user][:id]) ? 'you' : user.email %>
+          nil
         end
       end
 

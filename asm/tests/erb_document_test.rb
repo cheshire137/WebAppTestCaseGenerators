@@ -65,9 +65,16 @@ class ERBDocumentTest < Test::Unit::TestCase
     sections = if_winner_equal.get_sections_and_nodes().select do |child|
       child.is_a?(AtomicSection)
     end
-    assert_equal 2, sections.length, "Expected two atomic section children of if-winner-equal ERBTag: " + sections.inspect
+    assert_equal 1, sections.length, "Expected one atomic section child of if-winner-equal ERBTag: " + sections.inspect
     assert_not_nil if_winner_equal.true_content, "Expected non-nil true_content for if-winner-equal ERBTag"
     assert_not_nil if_winner_equal.false_content, "Expected non-nil false_content for if-winner-equal ERBTag"
+    else_tag = if_winner_equal.close
+    assert_not_nil else_tag, "Expected 'else' to be close of: " + if_winner_equal.to_s
+    assert_equal "else", else_tag.ruby_code
+    else_sections = else_tag.get_sections_and_nodes().select do |child|
+      child.is_a?(AtomicSection)
+    end
+    assert_equal 1, else_sections.length, "Expected one atomic section child of else tag: " + else_sections.inspect
   end
 
   def test_square_bracket_accessor_fixnum

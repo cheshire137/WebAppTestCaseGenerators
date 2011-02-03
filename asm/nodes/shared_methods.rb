@@ -29,7 +29,9 @@ module SharedMethods
   def to_s_with_prefix(indent_level=0, suffix='', prefix='  ')
 	close_str = if !respond_to?(:close) || @close.nil?
 				  ''
-				else
+                elsif @close.respond_to?(:range)
+                  sprintf("-%d", @close.range.to_a.last)
+                else
 				  sprintf("-%d", @close.index)
 				end
 	sprintf("%s%d%s: %s", prefix * indent_level, @index, close_str, suffix)

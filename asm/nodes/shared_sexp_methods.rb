@@ -161,17 +161,21 @@ module SharedSexpMethods
     # only get ERBTags who might have nested AtomicSections within them,
     # as opposed to HTMLOpenTags and whatnot that would be duplicated
     # within AtomicSections we've already got
-    erb_content = @content.select do |child|
+    erb_content = (@content || []).select do |child|
       child.set_sexp() if child.sexp.nil?
       child.respond_to?(:sexp) && child.respond_to?(:content) && !child.content.nil?
     end
-    true_content = erb_content.select do |child|
+    true_erb = erb_content.select do |child|
       selection_true_case?(child.sexp)
-    end + atomic_sections.select do |section|
+    end
+    true_sections = atomic_sections.select do |section|
       section.set_sexp() if section.sexp.nil?
       selection_true_case?(section.sexp)
     end
-    false_content = (erb_content - true_content) + (atomic_sections - true_content)
+    true_content = true_erb + true_sections
+    false_erb = erb_content - true_erb
+    false_sections = atomic_sections - true_sections
+    false_content = false_erb + false_sections
 #    puts "True content:"
 #    pp true_content
 #    puts "\nFalse content:"
@@ -180,15 +184,81 @@ module SharedSexpMethods
     if respond_to?(:true_content=) && respond_to?(:false_content=)
       self.true_content = true_content
       self.false_content = false_content
+      last_true_index = first_false_index = -1
+      index_sort = lambda do |a, b|
+        a.index <=> b.index
+      end
+      unless true_content.nil? || true_content.empty?
+        last_true = true_content.sort(&index_sort).last
+        last_true_index = last_true.index
+        if last_true.respond_to?(:range) && !last_true.range.nil?
+          last_true_index = last_true.range.to_a.last
+        end
+        #puts "Last index in true content: " + last_true_index.to_s
+      end
+      unless false_content.nil? || false_content.empty?
+        first_false_index = false_content.sort(&index_sort).first.index
+        #puts "First index in false content: " + first_false_index.to_s
+      end
+      puts ''
+      if 2 == (first_false_index - last_true_index)
+        pivot_index = last_true_index + 1
+        condition_pivot = @content.find do |child|
+          child.respond_to?(:content=) && pivot_index == child.index
+        end
+        unless condition_pivot.nil?
+          # Move if's close to be the close of this else
+          condition_pivot.close = @close
+
+          if condition_pivot.content.nil? || condition_pivot.content.empty?
+            included_content = false_erb
+
+            included_content.each do |child|
+              if child.respond_to?(:parent=)
+                child.parent = condition_pivot
+              end
+            end
+
+            # TODO: do I need to check that all elements in the included
+            # content have an index > condition_pivot.index and <
+            # condition_pivot.close?
+            condition_pivot.content = included_content
+          else
+            raise "Cannot set content of #{condition_pivot}, it is already set"
+          end
+
+          if condition_pivot.atomic_sections.nil? || condition_pivot.atomic_sections.empty?
+            false_sections.each do |section|
+              condition_pivot.add_atomic_section(section)
+            end
+          else
+            raise "Cannot set atomic sections of #{condition_pivot}, they are already set"
+          end
+
+          # Wipe out the content that had contained the stuff that is now the
+          # content of the conditional's pivot element (e.g., the else), so we
+          # don't have repeated content/sections elsewhere.
+          delete_children_in_range(pivot_index, condition_pivot.close.index)
+
+          # Set the if's close to now be this else
+          condition_pivot.parent = self
+          @close = condition_pivot
+        end
+      end
     else
-      raise "Trying to split branch on a " + self.class.name
+      # End up here when, for example, there's an if statement within an ERBOutputTag,
+      # e.g., <%= (user.id == session[:user][:id]) ? 'you' : user.email %>
     end
   end
+
 
   # p -> p1* (loops)
   def iteration?
     set_sexp() if @sexp.nil?
-    return false if :invalid_ruby == @sexp
+    if :invalid_ruby == @sexp
+#      puts "Invalid ruby for:\n" + to_s
+      return false
+    end
     # For cases like the following sexp:
     # s(:iter,
     #  s(:call,
@@ -220,6 +290,8 @@ module SharedSexpMethods
   def aggregation?
     set_sexp() if @sexp.nil?
     return false if :invalid_ruby == @sexp
+    # TODO: go out and fetch the component expression for the thing
+    # being rendered, if possible?
     return true if self.class.sexp_outer_call?(@sexp, :render)
     false
   end

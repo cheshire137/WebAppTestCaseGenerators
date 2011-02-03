@@ -46,7 +46,7 @@ module ERBGrammar
 
     def range
       start_index = @index
-      end_index = !respond_to?(:close) || @close.nil? ? start_index : @close.index
+      end_index = (!respond_to?(:close) || @close.nil?) ? start_index : @close.index
       (start_index..end_index)
     end
 
