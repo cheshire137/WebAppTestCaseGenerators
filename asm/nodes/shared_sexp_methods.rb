@@ -182,14 +182,13 @@ module SharedSexpMethods
 #    pp false_content
 #    puts "\n------------------------"
     if respond_to?(:true_content=) && respond_to?(:false_content=)
+      true_content.sort! { |a, b| section_and_node_sort(a, b) }
+      false_content.sort! { |a, b| section_and_node_sort(a, b) }
       self.true_content = true_content
       self.false_content = false_content
       last_true_index = first_false_index = -1
-      index_sort = lambda do |a, b|
-        a.index <=> b.index
-      end
       unless true_content.nil? || true_content.empty?
-        last_true = true_content.sort(&index_sort).last
+        last_true = true_content.last
         last_true_index = last_true.index
         if last_true.respond_to?(:range) && !last_true.range.nil?
           last_true_index = last_true.range.to_a.last
@@ -197,7 +196,7 @@ module SharedSexpMethods
         #puts "Last index in true content: " + last_true_index.to_s
       end
       unless false_content.nil? || false_content.empty?
-        first_false_index = false_content.sort(&index_sort).first.index
+        first_false_index = false_content.first.index
         #puts "First index in false content: " + first_false_index.to_s
       end
       puts ''

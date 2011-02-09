@@ -69,25 +69,27 @@ module ERBGrammar
       end
     end
 
+    def section_and_node_sort(a, b)
+      comparison = a.range <=> b.range
+      equal = 0 == comparison
+      a_atomic = a.is_a?(AtomicSection)
+      b_atomic = b.is_a?(AtomicSection)
+      # Sort AtomicSections first so we don't end up repeating nodes that are
+      # accounted for in an AtomicSection
+      if equal && a_atomic && !b_atomic
+        -1
+      elsif equal && !a_atomic && b_atomic
+        1
+      else
+        comparison
+      end
+    end
+
     def get_sections_and_nodes(method_sym_to_call=nil, *args)
       atomic_sections_covered = []
       should_call_method = !method_sym_to_call.nil?
       details = (@atomic_sections || []) + (@content || [])
-      details.sort! do |a, b|
-        comparison = a.range <=> b.range
-        equal = 0 == comparison
-        a_atomic = a.is_a?(AtomicSection)
-        b_atomic = b.is_a?(AtomicSection)
-        # Sort AtomicSections first so we don't end up repeating nodes that are
-        # accounted for in an AtomicSection
-        if equal && a_atomic && !b_atomic
-          -1
-        elsif equal && !a_atomic && b_atomic
-          1
-        else
-          comparison
-        end
-      end
+      details.sort! { |a, b| section_and_node_sort(a, b) }
       details.collect do |section_or_node|
         cur_range = section_or_node.range
         if atomic_sections_covered.include?(cur_range.begin)# && !section_or_node.is_a?(AtomicSection)
