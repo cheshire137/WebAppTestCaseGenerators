@@ -11,6 +11,22 @@ class ERBDocumentTest < Test::Unit::TestCase
     assert_equal expected, actual, "Wrong component expression for login_index"
   end
 
+  def test_nested_aggregation_component_expression
+    doc = Parser.new.parse(fixture('game_index2.html'), 'game_index2.html.erb')
+    assert_not_nil doc
+    expected = "p1.(p2|(p3.p4*.p5))*.p6"
+    actual = doc.component_expression()
+    assert_equal expected, actual, "Wrong component expression for game_index2"
+  end
+
+  def test_nested_aggregation_selection_component_expression
+    doc = Parser.new.parse(fixture('game_index1.html'), 'game_index1.html.erb')
+    assert_not_nil doc
+    expected = "(NULL|(p1.(p2|(p3.p4*.p5))*.p6))"
+    actual = doc.component_expression()
+    assert_equal expected, actual, "Wrong component expression for game_index1"
+  end
+
   def test_nested_if_and_aggregation_component_expression
     doc = Parser.new.parse(fixture('top_records.html'), 'top_records.html.erb')
     assert_not_nil doc

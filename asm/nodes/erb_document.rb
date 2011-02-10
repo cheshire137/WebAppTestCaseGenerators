@@ -67,7 +67,7 @@ module ERBGrammar
 
     def find_code_units
       code_elements = ERBDocument.extract_ruby_code_elements(@content)
-      ERBDocument.find_code_units(self, code_elements, @content)
+      ERBDocument.find_code_units(code_elements, @content)
     end
 
 
@@ -222,7 +222,7 @@ module ERBGrammar
         code_els
       end
 
-      def self.find_code_units(parent, code_elements, content)
+      def self.find_code_units(code_elements, content)
         num_elements = code_elements.length
         start_index = end_index = 0
         while start_index < num_elements
@@ -243,7 +243,7 @@ module ERBGrammar
               #puts "Sexp: "
               #pp sexp
               #puts ''
-              setup_code_unit(parent, unit_elements, sexp, content)
+              setup_code_unit(unit_elements, sexp, content)
               start_index = end_index
             rescue Racc::ParseError
             end
@@ -257,7 +257,7 @@ module ERBGrammar
         end
       end
 
-      def self.setup_code_unit(parent, unit_elements, sexp, content)
+      def self.setup_code_unit(unit_elements, sexp, content)
         len = unit_elements.length
         if len < 1
           raise "Woah, how can I set up a code unit with no lines of code?"
@@ -289,7 +289,7 @@ module ERBGrammar
           #puts "--Now looking for code units in content:"
           #puts extract_ruby_code_elements(opening.content).map(&:to_s).join(",\n")
           #puts "---"
-          find_code_units(opening, extract_ruby_code_elements(opening.content), opening.content)
+          find_code_units(extract_ruby_code_elements(opening.content), opening.content)
         end
       end
   end
