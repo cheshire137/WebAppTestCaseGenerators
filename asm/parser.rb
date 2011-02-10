@@ -21,6 +21,7 @@ class Parser
     tree.identify_atomic_sections()
     tree.nest_atomic_sections()
     tree.split_branches()
+    tree.remove_duplicate_children()
     tree.source_file = file_name
     tree
   end
@@ -28,7 +29,7 @@ class Parser
   def parse_and_compress(data)
 	tree = parse(data)
 	puts "Compressing content..."
-	tree.compress_content
+	tree.compress_content()
 	tree
   end
 end

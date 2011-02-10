@@ -1,6 +1,7 @@
 module ERBGrammar
   class ERBOutputTag < Treetop::Runtime::SyntaxNode
     include SharedAtomicSectionMethods
+    extend SharedAtomicSectionMethods::ClassMethods
 	include SharedERBMethods
     include SharedSexpMethods
     extend SharedSexpMethods::ClassMethods

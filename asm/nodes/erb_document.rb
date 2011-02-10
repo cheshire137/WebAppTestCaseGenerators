@@ -7,6 +7,7 @@ module ERBGrammar
   class ERBDocument < Treetop::Runtime::SyntaxNode
     include Enumerable
     include SharedAtomicSectionMethods
+    extend SharedAtomicSectionMethods::ClassMethods
     include SharedChildrenMethods
     attr_reader :content, :initialized_content
     attr_accessor :source_file
@@ -66,7 +67,7 @@ module ERBGrammar
 
     def find_code_units
       code_elements = ERBDocument.extract_ruby_code_elements(@content)
-      ERBDocument.find_code_units(code_elements, @content)
+      ERBDocument.find_code_units(self, code_elements, @content)
     end
 
 
@@ -95,10 +96,12 @@ module ERBGrammar
         if child_node.browser_output?
           unless section.try_add_node?(child_node)
             section = create_section.call(section)
+#            section.parent = child_node
             section.try_add_node?(child_node)
           end
         elsif section.content.length > 0
           section = create_section.call(section)
+#          section.parent = child_node
         end
       end
       # Be sure to get the last section appended if it was a valid one,
@@ -156,6 +159,18 @@ module ERBGrammar
       end
     end
 
+    def remove_duplicate_children
+      each do |child|
+        #puts "Looking at child: #{child.range}"
+        has_content = child.respond_to?(:content) && !child.content.nil? && !child.content.empty?
+        has_close = child.respond_to?(:close) && !child.close.nil?
+        if has_content && has_close
+          #puts "Deleting range #{child.content.first.index}..#{child.close.index}"
+          delete_children_in_range(child.content.first.index, child.close.index)
+        end
+      end
+    end
+
     def save_atomic_sections(base_dir='.')
       all_sections = get_atomic_sections_recursive((@atomic_sections || []) + (@content || []))
       if all_sections.nil? || all_sections.empty?
@@ -207,7 +222,7 @@ module ERBGrammar
         code_els
       end
 
-      def self.find_code_units(code_elements, content)
+      def self.find_code_units(parent, code_elements, content)
         num_elements = code_elements.length
         start_index = end_index = 0
         while start_index < num_elements
@@ -228,7 +243,7 @@ module ERBGrammar
               #puts "Sexp: "
               #pp sexp
               #puts ''
-              setup_code_unit(unit_elements, sexp, content)
+              setup_code_unit(parent, unit_elements, sexp, content)
               start_index = end_index
             rescue Racc::ParseError
             end
@@ -242,7 +257,7 @@ module ERBGrammar
         end
       end
 
-      def self.setup_code_unit(unit_elements, sexp, content)
+      def self.setup_code_unit(parent, unit_elements, sexp, content)
         len = unit_elements.length
         if len < 1
           raise "Woah, how can I set up a code unit with no lines of code?"
@@ -255,7 +270,9 @@ module ERBGrammar
           return
         end
         opening_tag_has_close = opening.respond_to?(:close)
-        opening.close = unit_elements.last if opening_tag_has_close
+        if opening_tag_has_close
+          opening.close = unit_elements.last
+        end
         included_content = content.select do |el|
           el.index > opening.index && (!opening_tag_has_close || el.index < opening.close.index)
         end
@@ -267,11 +284,12 @@ module ERBGrammar
               child.parent = opening
             end
           end
+          included_content.sort! { |a, b| section_and_node_sort(a, b) }
           opening.content = included_content
           #puts "--Now looking for code units in content:"
           #puts extract_ruby_code_elements(opening.content).map(&:to_s).join(",\n")
           #puts "---"
-          find_code_units(extract_ruby_code_elements(opening.content), opening.content)
+          find_code_units(opening, extract_ruby_code_elements(opening.content), opening.content)
         end
       end
   end

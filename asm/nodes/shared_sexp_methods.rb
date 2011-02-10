@@ -182,8 +182,8 @@ module SharedSexpMethods
 #    pp false_content
 #    puts "\n------------------------"
     if respond_to?(:true_content=) && respond_to?(:false_content=)
-      true_content.sort! { |a, b| section_and_node_sort(a, b) }
-      false_content.sort! { |a, b| section_and_node_sort(a, b) }
+      true_content.sort! { |a, b| self.class.section_and_node_sort(a, b) }
+      false_content.sort! { |a, b| self.class.section_and_node_sort(a, b) }
       self.true_content = true_content
       self.false_content = false_content
       last_true_index = first_false_index = -1
@@ -234,14 +234,14 @@ module SharedSexpMethods
             raise "Cannot set atomic sections of #{condition_pivot}, they are already set"
           end
 
+          # Set the if's close to now be this else
+          condition_pivot.parent = self
+          @close = condition_pivot
+
           # Wipe out the content that had contained the stuff that is now the
           # content of the conditional's pivot element (e.g., the else), so we
           # don't have repeated content/sections elsewhere.
           delete_children_in_range(pivot_index, condition_pivot.close.index)
-
-          # Set the if's close to now be this else
-          condition_pivot.parent = self
-          @close = condition_pivot
         end
       end
     else

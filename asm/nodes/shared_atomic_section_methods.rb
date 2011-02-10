@@ -1,6 +1,23 @@
 require 'set'
 module ERBGrammar
   module SharedAtomicSectionMethods
+    module ClassMethods
+      def section_and_node_sort(a, b)
+        comparison = a.range <=> b.range
+        equal = 0 == comparison
+        a_atomic = a.is_a?(AtomicSection)
+        b_atomic = b.is_a?(AtomicSection)
+        # Sort AtomicSections first so we don't end up repeating nodes that are
+        # accounted for in an AtomicSection
+        if equal && a_atomic && !b_atomic
+          -1
+        elsif equal && !a_atomic && b_atomic
+          1
+        else
+          comparison
+        end
+      end
+    end
     attr_reader :atomic_sections
 
     def add_atomic_section(section)
@@ -39,13 +56,18 @@ module ERBGrammar
       end
     end
 
-    def component_expression
+    def component_expression(seen_children=[])
       cur_state = get_current_state()
-      return selection_component_expression() if :sel == cur_state
+      seen_children << self unless seen_children.include?(self)
+      if :sel == cur_state
+        expr = selection_component_expression(seen_children)
+        return expr
+      end
       children = get_sections_and_nodes()
       child_str = children.collect do |node|
-        if node.respond_to?(:component_expression)
-          node.component_expression()
+        if node.respond_to?(:component_expression) && !seen_children.include?(node)
+          seen_children << node
+          node.component_expression(seen_children)
         else
           nil
         end
@@ -53,35 +75,19 @@ module ERBGrammar
         !expr.blank?
       end.join('.')
       case cur_state
-      when :iter:
-        has_single_child = 1 == children.length
-        open_paren = has_single_child ? '' : '('
-        close_paren = has_single_child ? '' : ')'
-        sprintf("%s%s%s*", open_paren, child_str, close_paren)
-      when :aggr:
-        if respond_to?(:atomic_section_count) && children.empty?
-          sprintf("{p%s}", atomic_section_count)
+        when :iter:
+          has_single_child = (1 == children.length)
+          open_paren = has_single_child ? '' : '('
+          close_paren = has_single_child ? '' : ')'
+          sprintf("%s%s%s*", open_paren, child_str, close_paren)
+        when :aggr:
+          if respond_to?(:atomic_section_count) && children.empty?
+            sprintf("{p%s}", atomic_section_count)
+          else
+            sprintf("{%s}", child_str)
+          end
         else
-          sprintf("{%s}", child_str)
-        end
-      else
-        child_str
-      end
-    end
-
-    def section_and_node_sort(a, b)
-      comparison = a.range <=> b.range
-      equal = 0 == comparison
-      a_atomic = a.is_a?(AtomicSection)
-      b_atomic = b.is_a?(AtomicSection)
-      # Sort AtomicSections first so we don't end up repeating nodes that are
-      # accounted for in an AtomicSection
-      if equal && a_atomic && !b_atomic
-        -1
-      elsif equal && !a_atomic && b_atomic
-        1
-      else
-        comparison
+          child_str
       end
     end
 
@@ -89,10 +95,10 @@ module ERBGrammar
       atomic_sections_covered = []
       should_call_method = !method_sym_to_call.nil?
       details = (@atomic_sections || []) + (@content || [])
-      details.sort! { |a, b| section_and_node_sort(a, b) }
+      details.sort! { |a, b| self.class.section_and_node_sort(a, b) }
       details.collect do |section_or_node|
         cur_range = section_or_node.range
-        if atomic_sections_covered.include?(cur_range.begin)# && !section_or_node.is_a?(AtomicSection)
+        if atomic_sections_covered.include?(cur_range.begin)
           nil
         else
           atomic_sections_covered += cur_range.to_a
@@ -151,45 +157,57 @@ module ERBGrammar
 
     private
 
-      def selection_component_expression
-        if respond_to?(:true_content) && respond_to?(:false_content)
-          if @true_content.nil? || @false_content.nil?
-            "Has split branch, but no @true_content or no @false_content is set"
-          else
-            #puts "Selection with " + self.class.name
-            #pp self
-            #puts "\nTrue content:"
-            #pp @true_content
-            #puts "\nFalse content:"
-            #pp @false_content
-            #puts "--------------"
-            is_true_single = true_content.length <= 1
-            is_false_single = false_content.length <= 1
-            opening_true_paren = is_true_single ? '' : '('
-            closing_true_paren = is_true_single ? '' : ')'
-            opening_false_paren = is_false_single ? '' : '('
-            closing_false_paren = is_false_single ? '' : ')'
-            true_branch = case true_content.length
-                          when 0
-                            'NULL'
-                          else
-                            true_content.map(&:component_expression).join('.')
-                          end
-            false_branch = case false_content.length
-                           when 0
-                             'NULL'
-                           else
-                             false_content.map(&:component_expression).join('.')
-                           end
-            sprintf("(%s%s%s|%s%s%s)", opening_true_paren, true_branch,
-                    closing_true_paren, opening_false_paren, false_branch,
-                    closing_false_paren)
-          end
-        else
+      def selection_component_expression(seen_children=[])
+        if !respond_to?(:true_content) || !respond_to?(:false_content)
           # End up here when, for example, there's an if statement within an ERBOutputTag,
           # e.g., <%= (user.id == session[:user][:id]) ? 'you' : user.email %>
-          nil
+          return nil
         end
+        if @true_content.nil? || @false_content.nil?
+          return "Has split branch, but no @true_content or no @false_content is set"
+        end
+        #puts "Selection with " + self.class.name
+        #pp self
+        #puts "\nTrue content:"
+        #pp @true_content
+        #puts "\nFalse content:"
+        #pp @false_content
+        #puts "--------------"
+        num_true = @true_content.length
+        num_false = @false_content.length
+        is_true_single = num_true <= 1
+        is_false_single = num_false <= 1
+        opening_true_paren = is_true_single ? '' : '('
+        closing_true_paren = is_true_single ? '' : ')'
+        opening_false_paren = is_false_single ? '' : '('
+        closing_false_paren = is_false_single ? '' : ')'
+        child_selector = lambda do |n|
+                            if seen_children.include?(n)
+                              nil
+                            else
+                              seen_children << n
+                              n.component_expression(seen_children)
+                            end
+                          end
+        true_branch = case num_true
+                        when 0
+                          'NULL'
+                        else
+                          @true_content.map(&child_selector).compact.join('.')
+                      end
+        false_branch = case num_false
+                         when 0
+                           'NULL'
+                         else
+                           @false_content.map(&child_selector).compact.join('.')
+                       end
+        #puts "From #{to_s}"
+        #puts "True branch: " + true_branch
+        #puts "False branch: " + false_branch
+        #puts "--------------"
+        sprintf("(%s%s%s|%s%s%s)", opening_true_paren, true_branch,
+                closing_true_paren, opening_false_paren, false_branch,
+                closing_false_paren)
       end
 
       def nodes_to_atomic_section_content(sections)

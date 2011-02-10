@@ -22,7 +22,7 @@ class AtomicSection
 	last_node.same_atomic_section?(node) && last_node != node
   end
 
-  def component_expression
+  def component_expression(seen_children=[])
     unless @content.nil? || @content.empty?
 #      puts "Atomic section has content:"
 #      pp @content
@@ -39,9 +39,14 @@ class AtomicSection
       end.compact.select do |expr|
         !expr.blank?
       end.join('.')
-      return child_str unless child_str.blank? || '.' == child_str
+      unless child_str.blank? || '.' == child_str
+        #puts "Component expr. segment from p#@count: " + child_str
+        return child_str
+      end
     end
-    sprintf("p%d", @count)
+    expr = sprintf("p%d", @count)
+    #puts "Component expr. segment from p#@count: " + expr
+    expr
   end
 
   def include?(node)
