@@ -1,3 +1,5 @@
+require 'pp'
+
 module SharedSexpMethods
   attr_accessor :sexp
 
@@ -68,51 +70,22 @@ module SharedSexpMethods
     return unless @sexp.nil?
     parser = RubyParser.new
     begin
-      @sexp = parser.parse(ruby_code)
+      @sexp = parser.parse(ruby_code())
     rescue Racc::ParseError
       @sexp = :invalid_ruby
     end
     #pp @sexp
+    #puts ''
   end
 
   def selection_true_case?(exp_true_sexp)
-    return false if :invalid_ruby == exp_true_sexp
-    unless exp_true_sexp.is_a?(Sexp)
-      raise ArgumentError, "Expected parameter to be of type Sexp, got " + exp_true_sexp.class.name
-    end
-    set_sexp() if @sexp.nil?
-    if !selection?
-      puts "Not a selection"
-      return false
-    end
     true_case = @sexp[2]
-    #puts "Looking for "
-    #pp exp_true_sexp
-    #puts ''
-    #puts "In:"
-    #pp true_case
-    #puts "\n\n"
-    if !true_case.nil? && (true_case.include?(exp_true_sexp) || true_case == exp_true_sexp)
-      #puts "Found it!"
-      return true
-    end
-    false
+    sexp_contains_sexp?(exp_true_sexp, true_case)
   end
 
   def selection_false_case?(exp_false_sexp)
-    return false if :invalid_ruby == exp_false_sexp
-    unless exp_false_sexp.is_a?(Sexp)
-      raise ArgumentError, "Expected parameter to be of type Sexp, got " + exp_false_sexp.class.name
-    end
-    set_sexp() if @sexp.nil?
-    return false if !selection?
     false_case = @sexp[3]
-    if self.class.sexp_outer_keyword?(false_case, :block)
-      block_contents = false_case[1...false_case.length]
-    else
-      block_contents = false_case
-    end
-    !block_contents.nil? && block_contents.include?(exp_false_sexp)
+    sexp_contains_sexp?(exp_false_sexp, false_case)
   end
 
   # p -> p1 | p2 (conditionals)
@@ -149,22 +122,23 @@ module SharedSexpMethods
   def split_branch
     true_branch = @sexp[2]
     false_branch = @sexp[3]
-#    puts "True branch:"
-#    pp true_branch
-#    puts "\nFalse branch:"
-#    pp false_branch
+    #puts "True branch:"
+    #pp true_branch
+    #puts "\nFalse branch:"
+    #pp false_branch
     atomic_sections = @atomic_sections || []
-#    puts "Atomic sections:"
-#    pp atomic_sections
-#    puts "\n"
+    #puts "\nAtomic sections:"
+    #pp atomic_sections
     # Expect non-ERBTag content to be contained in AtomicSections, so
     # only get ERBTags who might have nested AtomicSections within them,
     # as opposed to HTMLOpenTags and whatnot that would be duplicated
     # within AtomicSections we've already got
     erb_content = (@content || []).select do |child|
       child.set_sexp() if child.sexp.nil?
-      child.respond_to?(:sexp) && child.respond_to?(:content) && !child.content.nil?
+      child.is_a?(ERBGrammar::ERBTag)
     end
+    #puts "\nAll ERB content:"
+    #pp erb_content
     true_erb = erb_content.select do |child|
       selection_true_case?(child.sexp)
     end
@@ -173,14 +147,20 @@ module SharedSexpMethods
       selection_true_case?(section.sexp)
     end
     true_content = true_erb + true_sections
-    false_erb = erb_content - true_erb
-    false_sections = atomic_sections - true_sections
+    #false_erb = erb_content - true_erb
+    #false_sections = atomic_sections - true_sections
+    false_erb = erb_content.select do |child|
+      selection_false_case?(child.sexp)
+    end
+    false_sections = atomic_sections.select do |section|
+      selection_false_case?(section.sexp)
+    end
     false_content = false_erb + false_sections
-#    puts "True content:"
-#    pp true_content
-#    puts "\nFalse content:"
-#    pp false_content
-#    puts "\n------------------------"
+    #puts "\nTrue content:"
+    #pp true_content
+    #puts "\nFalse content:"
+    #pp false_content
+    #puts "\n------------------------"
     if respond_to?(:true_content=) && respond_to?(:false_content=)
       true_content.sort! { |a, b| self.class.section_and_node_sort(a, b) }
       false_content.sort! { |a, b| self.class.section_and_node_sort(a, b) }
@@ -294,4 +274,62 @@ module SharedSexpMethods
     return true if self.class.sexp_outer_call?(@sexp, :render)
     false
   end
+
+  private
+    def lines_consecutive_in_sexp?(needle, haystack)
+      return false if haystack.nil?
+      found_each_line_consecutively = true
+      index = 0
+      prev_index = -1
+      num_lines = needle.length
+      while index < num_lines && found_each_line_consecutively && !prev_index.nil?
+        line = needle[index]
+        #puts "Previous matching index: #{prev_index}"
+        #puts "Looking for line ##{index} #{line}"
+        matching_index = haystack.index { |s| line == s }
+        #puts "Found at index ##{matching_index || 'nil'}"
+        found_each_line_consecutively = !matching_index.nil? && (-1 == prev_index || matching_index-1 == prev_index)
+        #puts "Found each line consecutively: #{found_each_line_consecutively}"
+        prev_index = matching_index
+        index += 1
+      end
+      found_each_line_consecutively
+    end
+
+    def sexp_contains_sexp?(needle, haystack)
+      return false if :invalid_ruby == needle || haystack.nil?
+      unless needle.is_a?(Sexp)
+        raise ArgumentError, "Expected parameter to be of type Sexp, got " + needle.class.name
+      end
+      unless haystack.is_a?(Sexp)
+        raise ArgumentError, "Expected parameter to be of type Sexp, got " + haystack.class.name
+      end
+      set_sexp() if @sexp.nil?
+      if !selection?
+        puts "Not a selection"
+        return false
+      end
+      contained_or_equal = lambda do |n, h|
+        #puts "Looking for "
+        #pp n
+        #puts "\nIn:"
+        #pp h
+        #puts "\n\n"
+        if !h.nil? && (h.include?(n) || h == n)
+          #puts "Found it!"
+          return true
+        end
+        false
+      end
+      return true if contained_or_equal.call(needle, haystack)
+      #if self.class.sexp_outer_keyword?(haystack, :block)
+      #  haystack = haystack[1...haystack.length]
+      #end
+      if self.class.sexp_outer_keyword?(needle, :block)
+        needle = needle[1...needle.length]
+      end
+      return true if contained_or_equal.call(needle, haystack)
+      return true if lines_consecutive_in_sexp?(needle, haystack)
+      false
+    end
 end

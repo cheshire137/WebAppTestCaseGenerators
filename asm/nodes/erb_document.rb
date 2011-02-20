@@ -70,7 +70,6 @@ module ERBGrammar
       ERBDocument.find_code_units(code_elements, @content)
     end
 
-
     def get_atomic_sections_recursive(nodes=[])
       sections = []
       nodes.each do |node|

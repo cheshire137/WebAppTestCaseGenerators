@@ -2,12 +2,14 @@
 require 'parser.rb'
 require 'find'
 
-unless ARGV.length == 1
-  printf("Usage: %s path_to_rails_app_root\n", $0)
+unless ARGV.length == 2
+  printf("Usage: %s path_to_rails_app_root root_url_of_site\n", $0)
   exit
 end
 
-rails_root_path = ARGV.first
+rails_root_path = ARGV.shift
+root_url = ARGV.shift
+
 app_path = File.join(rails_root_path, 'app')
 unless File.exists?(app_path)
   printf("ERROR: expected app directory does not exist at %s", app_path)
@@ -22,7 +24,7 @@ end
 
 ERB_FILE_TYPES = ['rhtml', 'erb'].freeze
 EXCLUDED_DIRS = ['.svn'].freeze
-paths_comp_exprs = {}
+cims = []
 
 Find.find(views_path) do |path|
   if FileTest.directory?(path)
@@ -38,12 +40,14 @@ Find.find(views_path) do |path|
       erb = IO.readlines(path).join
       ast = Parser.new.parse(erb, path)
       expr = ast.component_expression()
-      paths_comp_exprs[path] = expr
+      cim << ComponentInteractionModel.new(path, expr)
+      cim.atomic_sections = ast.get_atomic_sections_recursive()
+      cims << cim
     end
   end
 end
 
-puts "Component expressions:"
-paths_comp_exprs.each do |path, expr|
-  printf("%s =>\n\t%s\n\n", path, expr)
+puts "Component Interaction Models:"
+cims.each do |cim|
+  puts cim
 end

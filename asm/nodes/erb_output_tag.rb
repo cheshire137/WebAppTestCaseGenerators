@@ -13,11 +13,11 @@ module ERBGrammar
     end
 
     def inspect
-      sprintf("%s (%d): %s", self.class, @index, ruby_code)
+      sprintf("%s (%d): %s", self.class, @index, ruby_code())
     end
 
     def to_s(indent_level=0)
-	  to_s_with_prefix(indent_level, '<%= ' + ruby_code)
+	  to_s_with_prefix(indent_level, '<%= ' + ruby_code())
     end
   end
 end

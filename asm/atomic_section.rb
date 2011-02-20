@@ -79,7 +79,11 @@ class AtomicSection
   # TODO: remove duplication between this and SharedHTMLTagMethods
   def ruby_code
     @content.collect do |child|
-      'puts "' + child.text_value.gsub(/"/, "\\\"") + '"'
+      if child.respond_to?(:ruby_code)
+        child.ruby_code()
+      else
+        'puts "' + child.text_value.gsub(/"/, "\\\"") + '"'
+      end
     end.join("\n")
   end
 

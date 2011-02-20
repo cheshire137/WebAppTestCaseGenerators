@@ -1,0 +1,11 @@
+<% if is_last_message_bad?(session) %>
+  <% if session[:user][:rock] %>
+    <div id="the_rock" style="display: none;">
+      <%= image_tag 'the_rock.jpg', :alt => 'The Rock scares you', :id => 'the_rock_image' %>
+    </div>
+  <% end %>
+  <p class="error"><%= @game.last_message %></p>
+<% else %>
+  <p class="notice"><%= @game.last_message %></p>
+  <!-- (((p1|NULL).p2)|p3) -->
+<% end %>

@@ -4,51 +4,45 @@ require File.join(base_path, 'test_helper.rb')
 
 class ERBDocumentTest < Test::Unit::TestCase
   def test_form_tag_component_expression
-    doc = Parser.new.parse(fixture('login_index.html'), 'login_index.html.erb')
-    assert_not_nil doc
-    expected = "p1"
-    actual = doc.component_expression()
-    assert_equal expected, actual, "Wrong component expression for login_index"
+    assert_component_expression(fixture('login_index.html'),
+                                'login_index.html.erb',
+                                'p1')
   end
 
   def test_javascript_component_expression
-    doc = Parser.new.parse(fixture('javascript.html'), 'javascript.html.erb')
-    assert_not_nil doc
-    expected = "(NULL|p1)"
-    actual = doc.component_expression()
-    assert_equal expected, actual, "Wrong component expression for javascript"
+    assert_component_expression(fixture('javascript.html'),
+                                'javascript.html.erb',
+                                '(p1|NULL)')
+  end
+
+  def test_nested_unequal_ifs_component_expression
+    assert_component_expression(fixture('nested_unequal_ifs.html'),
+                                'nested_unequal_ifs.html.erb',
+                                "(((p1|NULL).p2)|p3)")
   end
 
   def test_nested_aggregation_component_expression
-    doc = Parser.new.parse(fixture('game_index2.html'), 'game_index2.html.erb')
-    assert_not_nil doc
-    expected = "p1.(p2|(p3.p4*.p5))*.p6"
-    actual = doc.component_expression()
-    assert_equal expected, actual, "Wrong component expression for game_index2"
+    assert_component_expression(fixture('game_index2.html'),
+                                'game_index2.html.erb',
+                                "p1.(p2|(p3.p4*.p5))*.p6")
   end
 
   def test_nested_aggregation_selection_component_expression
-    doc = Parser.new.parse(fixture('game_index1.html'), 'game_index1.html.erb')
-    assert_not_nil doc
-    expected = "(NULL|(p1.(p2|(p3.p4*.p5))*.p6))"
-    actual = doc.component_expression()
-    assert_equal expected, actual, "Wrong component expression for game_index1"
+    assert_component_expression(fixture('game_index1.html'),
+                                'game_index1.html.erb',
+                                '(NULL|(p1.(p2|(p3.p4*.p5))*.p6))')
   end
 
   def test_nested_if_and_aggregation_component_expression
-    doc = Parser.new.parse(fixture('top_records.html'), 'top_records.html.erb')
-    assert_not_nil doc
-    expected = "p1.(p2|(p3.{p4}.p5)).p6.(p7|(p8.{p9}.p10)).p11"
-    actual = doc.component_expression()
-    assert_equal expected, actual, "Wrong component expression for top_records"
+    assert_component_expression(fixture('top_records.html'),
+                                'top_records.html.erb',
+                                'p1.(p2|(p3.{p4}.p5)).p6.(p7|(p8.{p9}.p10)).p11')
   end
 
   def test_nested_if_and_loop_component_expression
-    doc = Parser.new.parse(fixture('_finished.html'), '_finished.html.erb')
-    assert_not_nil doc
-    expected = "((p1|p2)|NULL).(NULL|p3).(NULL|p4).p5.p6*.p7"    
-    actual = doc.component_expression()
-    assert_equal expected, actual, "Wrong component expression for _finished"
+    assert_component_expression(fixture('_finished.html'),
+                                '_finished.html.erb',
+                                '((p1|p2)|NULL).(NULL|p3).(NULL|p4).p5.p6*.p7')
   end
 
   def test_delete_node
@@ -129,11 +123,18 @@ class ERBDocumentTest < Test::Unit::TestCase
 	assert_equal 0, elements[0].index
   end
 
-
   def test_length
 	doc = Parser.new.parse(fixture('login_index.html'), 'login_index.html.erb')
 	assert_not_nil doc
 	assert_equal 1, doc.length,
 	  "ERB document has all nodes nested within a form_tag, so doc should have length 1"
   end
+
+  private
+    def assert_component_expression(erb, file_name, expected)
+      doc = Parser.new.parse(erb, file_name)
+      assert_not_nil doc
+      actual = doc.component_expression()
+      assert_equal expected, actual, "Wrong component expression for " + file_name
+    end
 end
