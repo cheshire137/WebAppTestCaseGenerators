@@ -11,6 +11,14 @@ class ERBDocumentTest < Test::Unit::TestCase
     assert_equal expected, actual, "Wrong component expression for login_index"
   end
 
+  def test_javascript_component_expression
+    doc = Parser.new.parse(fixture('javascript.html'), 'javascript.html.erb')
+    assert_not_nil doc
+    expected = "(NULL|p1)"
+    actual = doc.component_expression()
+    assert_equal expected, actual, "Wrong component expression for javascript"
+  end
+
   def test_nested_aggregation_component_expression
     doc = Parser.new.parse(fixture('game_index2.html'), 'game_index2.html.erb')
     assert_not_nil doc

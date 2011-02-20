@@ -1,0 +1,18 @@
+<% if session[:user][:rock] %>
+  <div id="the_rock" style="display: none;">
+    <%= image_tag 'the_rock.jpg', :alt => 'The Rock scares you', :id => 'the_rock_image' %>
+  </div>
+  <script type="text/javascript">
+    var original_width = 1178;
+    var original_height = 1319;
+    var new_height = document.viewport.getHeight();
+    var new_width = original_width * (new_height / original_height);
+    $('the_rock').style.left = (document.viewport.getWidth() / 2.0) - (new_width / 2.0) + 'px';
+    $('the_rock_image').width = new_width;
+    $('the_rock_image').height = new_height;
+    Effect.Grow('the_rock');
+    //Effect.Shake('the_rock');
+    setTimeout(function() {Effect.Shrink('the_rock');}, 1000);
+  </script>
+  <!-- (p1|NULL) -->
+<% end %>

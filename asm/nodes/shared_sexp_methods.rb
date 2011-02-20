@@ -199,7 +199,7 @@ module SharedSexpMethods
         first_false_index = false_content.first.index
         #puts "First index in false content: " + first_false_index.to_s
       end
-      puts ''
+      #puts ''
       if 2 == (first_false_index - last_true_index)
         pivot_index = last_true_index + 1
         condition_pivot = @content.find do |child|

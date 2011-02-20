@@ -9,7 +9,7 @@ class Parser
   @@parser = ERBGrammarParser.new
 
   def parse(data, file_name)
-	puts "Parsing ERB file " + file_name + " with Treetop parser..."
+    printf("Parsing ERB file %s...\n", file_name)
     tree = @@parser.parse data
     if tree.nil?
       raise Exception, "Parse error at offset: #{@@parser.index}"
