@@ -11,8 +11,7 @@ module ERBGrammar
     include SharedChildrenMethods
     attr_reader :content, :initialized_content
     attr_accessor :source_file
-    NEW_LINE = /[\r\n]/.freeze
-    @@parser = RubyParser.new
+    STATEMENT_END = /[\r\n;]/.freeze
 
     def [](obj)
       if obj.is_a?(Fixnum)
@@ -195,6 +194,70 @@ module ERBGrammar
       end
     end
 
+    def find_code_start_within_code(needle, haystack, split_needle)
+      if needle.nil? || !needle.is_a?(String)
+        raise ArgumentError, "Expected needle to be a string, got " + needle.class.name
+      end
+      if haystack.nil? || !haystack.is_a?(String)
+        raise ArgumentError, "Expected haystack to be a string, got " + haystack.class.name
+      end
+      code_start = haystack.index(needle)
+      return code_start unless code_start.nil?
+      if split_needle.nil? || !split_needle.is_a?(Array)
+        raise ArgumentError, "Expected split_needle to be non-nil array, got " + split_needle.class.name
+      end
+      # Lines of code may have been rejoined with \n when originally they were
+      # only separated with ;, for example
+      code_starts = split_needle.collect do |needle_piece|
+        if needle_piece.strip.blank?
+          :whitespace
+        else
+          haystack.index(needle_piece)
+        end
+      end
+      if code_starts.empty?
+        raise "Given split needle had no pieces:\nNeedle: #{needle}\nHaystack: #{haystack}\nSplit needle: #{split_needle.inspect}"
+      end
+      length_of_separator = 1
+      #puts "Code starts: [" + code_starts.collect { |c| (c || 'nil').to_s }.join(', ') + ']'
+      code_starts.each_with_index do |code_start, i|
+        cur_needle = split_needle[i]
+        if 0 == i
+          if code_start.nil?
+            raise "Could not find needle chunk ::#{cur_needle}:: within haystack #{haystack}"
+          end
+        elsif :whitespace != code_start
+          prev_code_start = nil
+          prev_index = i-1
+          length_between = 0
+          while prev_index >= 0 && :whitespace == code_starts[prev_index]
+            length_between += split_needle[prev_index].length + length_of_separator
+            prev_index -= 1
+          end
+          prev_code_start = code_starts[prev_index]
+          prev_needle = split_needle[prev_index]
+
+          if prev_code_start.nil?
+            raise "Could not find needle chunk #{prev_needle} within haystack #{haystack}"
+          end
+
+          expected_code_start = prev_code_start + prev_needle.length + length_between + length_of_separator
+          #puts "Expected code start #{expected_code_start}, instead got #{code_start}"
+
+          if code_start.nil? || code_start != expected_code_start
+            raise "Could not find ::#{needle}:: within ::#{haystack}:: in order to split multiple ERB statements in a single ERB tag into separate ERB tags; specifically could not find #{cur_needle}"
+          end
+        end
+      end
+
+      #puts "Index of #{needle} within #{haystack} is #{code_starts[0]}"
+
+      # We did find all the chunks of the split_needle consecutively within
+      # the haystack, so we can return the index of where the first chunk of
+      # the split_needle was found in the haystack
+      code_starts[0]
+    end
+
     def split_out_erb_newlines
       index = 0
       num_children = @content.length
@@ -205,11 +268,11 @@ module ERBGrammar
           next
         end
         code = child.ruby_code()
-        unless code =~ NEW_LINE
+        unless code =~ STATEMENT_END
           index += 1
           next
         end
-        split_code = code.split(NEW_LINE)
+        split_code = code.split(STATEMENT_END)
         contained_units = ERBDocument.get_code_units(split_code)
         if contained_units.empty?
           contained_units = ERBDocument.split_out_ends(split_code)
@@ -222,7 +285,7 @@ module ERBGrammar
           child.overridden_ruby_code = code
           contained_units.each do |code_line|
             cur_code = child.overridden_ruby_code
-            replace_index = cur_code.index(code_line)
+            replace_index = find_code_start_within_code(code_line, cur_code, split_code)
             replace_index_end = replace_index + code_line.length
             before_chunk = cur_code[0...replace_index]
             after_chunk = cur_code[replace_index_end+1...cur_code.length]
@@ -293,6 +356,7 @@ module ERBGrammar
         #pp code_elements
         num_elements = code_elements.length
         start_index = end_index = 0
+        parser = RubyParser.new
         while start_index < num_elements
           while end_index < num_elements
             range = start_index..end_index
@@ -307,7 +371,7 @@ module ERBGrammar
             #puts "\n"
             end_index += 1
             begin
-              sexp = @@parser.parse(unit_lines.join("\n"))
+              sexp = parser.parse(unit_lines.join("\n"))
               #puts "Lines of code: " + unit_lines.join("\n")
               #puts "Sexp: "
               #pp sexp
@@ -330,6 +394,7 @@ module ERBGrammar
         code_units = []
         num_elements = code_elements.length
         start_index = end_index = 0
+        parser = RubyParser.new
         while start_index < num_elements
           while end_index < num_elements
             range = start_index..end_index
@@ -338,8 +403,8 @@ module ERBGrammar
             begin
               joined_lines = unit_lines.join("\n")
               # Call #dup because otherwise end up with pound sign added to
-              # beginning O_o:
-              @@parser.parse(joined_lines.dup)
+              # beginning (?!):
+              parser.parse(joined_lines.dup())
               code_units << joined_lines
               start_index = end_index
             rescue Racc::ParseError

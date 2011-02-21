@@ -28,20 +28,22 @@ class SyntaxNodeTest < Test::Unit::TestCase
   private
     def get_test_nodes
       doc = Parser.new.parse(fixture('login_index.html'), 'login_index.html.erb')
-      html_tag_1 = doc[6]
-      html_tag_2 = doc[7]
-      html_tag_3 = doc[9]
-      assert_equal html_tag_1.class, HTMLOpenTag
-      assert_equal html_tag_2.class, HTMLOpenTag
-      assert_equal html_tag_3.class, HTMLCloseTag
-      output_tag_1 = doc[10]
-      output_tag_2 = doc[16]
-      assert_equal output_tag_1.class, ERBOutputTag
-      assert_equal output_tag_2.class, ERBOutputTag
-      erb_tag_1 = doc[0]
-      erb_tag_2 = doc[24]
-      assert_equal erb_tag_1.class, ERBTag
-      assert_equal erb_tag_2.class, ERBTag
+      form_tag = doc[0]
+      assert_equal ERBTag, form_tag.class
+      section = form_tag.atomic_sections[0]
+      html_tag_1 = section.content[0]
+      html_tag_2 = section.content[1]
+      html_tag_3 = section.content[3]
+      assert_equal HTMLOpenTag, html_tag_1.class, "Tree:\n" + doc.to_s
+      assert_equal HTMLOpenTag, html_tag_2.class
+      assert_equal HTMLCloseTag, html_tag_3.class
+      output_tag_1 = section.content[9]
+      output_tag_2 = section.content[15]
+      assert_equal ERBOutputTag, output_tag_1.class, output_tag_1.to_s
+      assert_equal ERBOutputTag, output_tag_2.class, output_tag_2.to_s
+      erb_tag_1 = form_tag
+      erb_tag_2 = form_tag.close
+      assert_equal ERBTag, erb_tag_2.class
       assert !erb_tag_1.browser_output?
       assert !erb_tag_2.browser_output?
       {:html_tags => [html_tag_1, html_tag_2, html_tag_3],

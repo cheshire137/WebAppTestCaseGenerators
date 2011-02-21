@@ -1,0 +1,16 @@
+<%
+[1, 2, 3].each do |number|
+  number += 1
+  # A comment
+  txt = number.to_s
+  # Another comment
+  # Second line of the second comment
+  method_call(txt, number)
+end
+# Final comment %>
+<html>
+  <%= some_value %>
+  <%= # Nothing but a comment %>
+  <% while true; ; value = 'test';
+  end; # Trailing comment %>
+</html>

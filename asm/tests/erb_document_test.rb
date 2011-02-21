@@ -15,6 +15,12 @@ class ERBDocumentTest < Test::Unit::TestCase
                                 '(p1|NULL)')
   end
 
+  def test_multiple_statements_in_erb_tags_component_expression
+    assert_component_expression(fixture('multiple_lines_in_erb.html'),
+                                'multiple_lines_in_erb.html.erb',
+                                'p1.p2')
+  end
+
   def test_multiple_lines_in_erb_tags_component_expression
     assert_component_expression(fixture('nested_loop.html'),
                                 'nested_loop.html.erb',

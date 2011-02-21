@@ -76,10 +76,14 @@ module ERBGrammar
       end.join('.')
       case cur_state
         when :iter:
-          has_single_child = (1 == children.length)
-          open_paren = has_single_child ? '' : '('
-          close_paren = has_single_child ? '' : ')'
-          sprintf("%s%s%s*", open_paren, child_str, close_paren)
+          if child_str.nil? || child_str.blank?
+            nil
+          else
+            has_single_child = (1 == children.length)
+            open_paren = has_single_child ? '' : '('
+            close_paren = has_single_child ? '' : ')'
+            sprintf("%s%s%s*", open_paren, child_str, close_paren)
+          end
         when :aggr:
           if respond_to?(:atomic_section_count) && children.empty?
             sprintf("{p%s}", atomic_section_count)
