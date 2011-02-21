@@ -70,18 +70,8 @@ module ERBGrammar
       ERBDocument.find_code_units(code_elements, @content)
     end
 
-    def get_atomic_sections_recursive(nodes=[])
-      sections = []
-      nodes.each do |node|
-        sections << node if node.is_a?(AtomicSection)
-        if node.respond_to?(:content) && !node.content.nil?
-          sections += get_atomic_sections_recursive(node.content)
-        end
-        if node.respond_to?(:atomic_sections) && !node.atomic_sections.nil?
-          sections += node.atomic_sections
-        end
-      end
-      sections
+    def get_atomic_sections
+      get_atomic_sections_recursive((@atomic_sections || []) + (@content || []))
     end
 
     def identify_atomic_sections
@@ -176,7 +166,7 @@ module ERBGrammar
     end
 
     def save_atomic_sections(base_dir='.')
-      all_sections = get_atomic_sections_recursive((@atomic_sections || []) + (@content || []))
+      all_sections = get_atomic_sections()
       if all_sections.nil? || all_sections.empty?
         raise "No atomic sections to write to file"
       end
@@ -334,6 +324,20 @@ module ERBGrammar
         end
       end
 
+      def get_atomic_sections_recursive(nodes=[])
+        sections = []
+        nodes.each do |node|
+          sections << node if node.is_a?(AtomicSection)
+          if node.respond_to?(:content) && !node.content.nil?
+            sections += get_atomic_sections_recursive(node.content)
+          end
+          if node.respond_to?(:atomic_sections) && !node.atomic_sections.nil?
+            sections += node.atomic_sections
+          end
+        end
+        sections
+      end
+
       def self.extract_ruby_code_elements(nodes)
         code_els = []
         nodes.each do |el|
@@ -379,6 +383,9 @@ module ERBGrammar
               setup_code_unit(unit_elements, sexp, content)
               start_index = end_index
             rescue Racc::ParseError
+            rescue SyntaxError
+              # Can occur when lines are split on ; and this happens in the
+              # middle of a string
             end
           end
 
@@ -405,9 +412,15 @@ module ERBGrammar
               # Call #dup because otherwise end up with pound sign added to
               # beginning (?!):
               parser.parse(joined_lines.dup())
+
+              # Append these lines to the array of code units since, if we made
+              # it past the parse(), these lines of Ruby code are valid together
               code_units << joined_lines
               start_index = end_index
             rescue Racc::ParseError
+            rescue SyntaxError
+              # Can occur when lines are split on ; and this happens in the
+              # middle of a string
             end
           end
 

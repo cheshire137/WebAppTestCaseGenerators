@@ -27,6 +27,12 @@ class ERBDocumentTest < Test::Unit::TestCase
                                 'p1.p2.p3*.p4')
   end
 
+  def test_multiple_erb_lines_unequal_ifs_component_expression
+    assert_component_expression(fixture('_in_progress.html'),
+                                '_in_progress.html.erb',
+                                '(NULL|(((p1|NULL).p2)|p3)).p4.p5.p6*.p7.p8*.p9.p10.p11.p12.(p13|p14)')
+  end
+
   def test_nested_unequal_ifs_component_expression
     assert_component_expression(fixture('nested_unequal_ifs.html'),
                                 'nested_unequal_ifs.html.erb',

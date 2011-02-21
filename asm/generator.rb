@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 require 'parser.rb'
 require 'find'
+require 'component_interaction_model.rb'
 
 unless ARGV.length == 2
   printf("Usage: %s path_to_rails_app_root root_url_of_site\n", $0)
@@ -40,14 +41,9 @@ Find.find(views_path) do |path|
       erb = IO.readlines(path).join
       ast = Parser.new.parse(erb, path)
       expr = ast.component_expression()
-      cim << ComponentInteractionModel.new(path, expr)
-      cim.atomic_sections = ast.get_atomic_sections_recursive()
-      cims << cim
+      sections = ast.get_atomic_sections()
+      cim = ComponentInteractionModel.new(root_url, path, expr, sections)
+      puts cim.to_s + "\n"
     end
   end
-end
-
-puts "Component Interaction Models:"
-cims.each do |cim|
-  puts cim
 end

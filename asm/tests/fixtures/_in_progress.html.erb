@@ -1,0 +1,116 @@
+<%  #Check to see if the last message was "bad" and does some sweet javascript if so.
+  unless @game.last_message.blank? %>
+  <% if is_last_message_bad?(session) %>
+    <% if session[:user][:rock] %>
+      <div id="the_rock" style="display: none;">
+        <%= image_tag 'the_rock.jpg', :alt => 'The Rock scares you', :id => 'the_rock_image' %>
+      </div>
+      <script type="text/javascript">
+        var original_width = 1178;
+        var original_height = 1319;
+        var new_height = document.viewport.getHeight();
+        var new_width = original_width * (new_height / original_height);
+        $('the_rock').style.left = (document.viewport.getWidth() / 2.0) - (new_width / 2.0) + 'px';
+        $('the_rock_image').width = new_width;
+        $('the_rock_image').height = new_height;
+        Effect.Grow('the_rock');
+        //Effect.Shake('the_rock');
+        setTimeout(function() {Effect.Shrink('the_rock');}, 1000);
+      </script>
+    <% end %>
+    <p class="error"><%= @game.last_message %></p>
+  <% else %>
+    <p class="notice"><%= @game.last_message %></p>
+  <% end %>
+<% end %>
+
+<div id="game_area">
+  <% #Write out a hidden AJAX (remote) form to submit cards.
+    form_remote_tag(:url => url_for(:action => "handle_card_submit"),
+                   :html => {:id => 'cardform'}) do %>
+    <%= hidden_field_tag 'form', 'card_submission' %>
+    <%  #Write out the cards for the user to see, along with hidden checkboxes.
+        @cards.each_with_index do |card, count| %>
+        <%= '<br style="clear: left;"/>' if count % @cards_per_row == 0 %>
+        <%= display_card(card, session[:user][:color_blind]) %>
+        <%= check_box_tag('cards[]', card.id, false, :id => "card#{card.id}", :class => 'display_none') %>
+        <% 
+    end
+  end %>
+</div><!--game_area-->
+<br style="clear: left;">
+<div id="game_sidebar">
+
+	<div id="scores_area">
+    <table>
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Score</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% #Write out the scores of all players.
+		   @game.scores.each do |score| %>
+          <tr>
+            <td><%= mail_to(score.user.email, nil, :encode => 'hex') %></td>
+            <td><%= score.score %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+	</div><!--scores_area-->
+	
+	<div id="form_area">
+    <div id="systemWorking">
+      <%= image_tag 'roller.gif', :alt => 'Loading...', :size => '16x16' %>
+    </div>
+		<!-- Call Set Form -->
+		<% #Write out an AJAX form to "call set."
+      form_remote_tag(:url => url_for(:action => "handle_call_set"),
+                      :loading => "$('systemWorking').show();") do %>
+			<%= hidden_field_tag 'form', GameController::CallSetButtonText %>
+			<%= image_submit_tag 'transparent.png', :id => 'callset_button' %>
+		<% end %>
+		<% #Write out an AJAX form to "claim no sets present."
+    form_remote_tag(:url => url_for(:action => "handle_no_sets"),
+                    :loading => "$('systemWorking').show();") do %>
+			<%= hidden_field_tag 'form', GameController::NoSetButtonText %>
+			<%= image_submit_tag 'transparent.png', :id => 'nosets_button' %>
+		<% end %>
+	</div><!--form_area-->
+
+  <br style="clear: both;" />
+</div><!--game_sidebar-->
+
+<%  #Check to see if the user has our permission to start clicking cards
+    #and set some Javascript variables accordingly.
+	if @game.set_user_id == session[:user][:id] %>
+	<script type="text/javascript">
+		can_click = true;
+		count = 0;
+		timeout = setTimeout(
+			function() { $('cardform').onsubmit(); },
+			7000
+		);
+		var cards = $$('div.card');
+		cards.each(
+			function(div, index) {
+				div.addClassName('clickable');
+			}
+		);
+	</script>
+<% else %>
+	<script type="text/javascript">
+		can_click = false;
+		count = 0;
+		if(timeout){ clearTimeout(timeout); }
+		timeout = 0;
+		var cards = $$('div.card');
+		cards.each(
+			function(div, index) {
+				div.removeClassName('clickable');
+			}
+		);
+	</script>
+<% end %>
