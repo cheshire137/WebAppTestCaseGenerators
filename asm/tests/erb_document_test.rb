@@ -15,6 +15,12 @@ class ERBDocumentTest < Test::Unit::TestCase
                                 '(p1|NULL)')
   end
 
+  def test_multiple_lines_in_erb_tags_component_expression
+    assert_component_expression(fixture('nested_loop.html'),
+                                'nested_loop.html.erb',
+                                'p1.p2.p3*.p4')
+  end
+
   def test_nested_unequal_ifs_component_expression
     assert_component_expression(fixture('nested_unequal_ifs.html'),
                                 'nested_unequal_ifs.html.erb',
@@ -72,10 +78,10 @@ class ERBDocumentTest < Test::Unit::TestCase
     #         <p class="game_result_negative"><%= @winner.email %> won!</p>
     #     <% end %>
     # <% end %>
-    if_winner = doc[0]
+    if_winner = doc[2]
     assert_not_nil if_winner
     assert_equal "ERBGrammar::ERBTag", if_winner.class.name, "Wrong type of node in slot 0 of ERBDocument"
-    assert_not_nil if_winner.content, "Nil content in if-winner ERBTag"
+    assert_not_nil if_winner.content, "Nil content in if-winner ERBTag\nTree: " + doc.to_s
     nodes = if_winner.get_sections_and_nodes()
     assert_equal 1, nodes.length, "Expected one ERBTag child node of if-winner ERBTag"
     if_winner_equal = nodes.first
@@ -87,7 +93,7 @@ class ERBDocumentTest < Test::Unit::TestCase
     assert_not_nil if_winner_equal.false_content, "Expected non-nil false_content for if-winner-equal ERBTag"
     else_tag = if_winner_equal.close
     assert_not_nil else_tag, "Expected 'else' to be close of: " + if_winner_equal.to_s
-    assert_equal "else", else_tag.ruby_code
+    assert_equal "else", else_tag.ruby_code()
     else_sections = else_tag.get_sections_and_nodes().select do |child|
       child.is_a?(AtomicSection)
     end

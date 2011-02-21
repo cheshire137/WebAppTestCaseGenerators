@@ -7,7 +7,7 @@ module ERBGrammar
     include SharedSexpMethods
     extend SharedSexpMethods::ClassMethods
     include SharedOpenTagMethods
-    attr_accessor :content, :parent, :close, :true_content, :false_content
+    attr_accessor :content, :parent, :close, :true_content, :false_content, :overridden_ruby_code
 
     def atomic_section_str(indent_level=0)
       if @atomic_sections.nil?
@@ -21,6 +21,14 @@ module ERBGrammar
 
     def inspect
       sprintf("%s (%d): %s\n%s", self.class, @index, ruby_code, content_str())
+    end
+
+    def ruby_code
+      if @overridden_ruby_code.nil?
+        code.content_removing_trims()
+      else
+        @overridden_ruby_code
+      end
     end
 
     def to_s(indent_level=0)

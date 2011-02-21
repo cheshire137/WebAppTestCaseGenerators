@@ -14,7 +14,11 @@ class Parser
     if tree.nil?
       raise Exception, "Parse error at offset: #{@@parser.index}"
     end
-    tree.initialize_content_and_indices()
+    tree.initialize_content()
+    tree.split_out_erb_newlines()
+    tree.initialize_indices()
+    #pp tree
+    #puts '-------------'
 	#puts "Pairing HTML tags..."
 	#tree.pair_tags
 	tree.find_code_units()

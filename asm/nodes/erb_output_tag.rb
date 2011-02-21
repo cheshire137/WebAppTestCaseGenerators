@@ -16,6 +16,10 @@ module ERBGrammar
       sprintf("%s (%d): %s", self.class, @index, ruby_code())
     end
 
+    def ruby_code
+      code.content_removing_trims()
+    end
+
     def to_s(indent_level=0)
 	  to_s_with_prefix(indent_level, '<%= ' + ruby_code())
     end

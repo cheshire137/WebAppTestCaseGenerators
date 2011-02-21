@@ -13,7 +13,7 @@ module ERBGrammar
     end
 
     def to_s(indent_level=0)
-      to_s_with_prefix(indent_level, result)
+      to_s_with_prefix(indent_level, text_value.strip)
     end
   end
 end

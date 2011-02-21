@@ -11,6 +11,7 @@ module ERBGrammar
     include SharedChildrenMethods
     attr_reader :content, :initialized_content
     attr_accessor :source_file
+    NEW_LINE = /[\r\n]/.freeze
     @@parser = RubyParser.new
 
     def [](obj)
@@ -108,17 +109,22 @@ module ERBGrammar
       @atomic_sections << section if section.content.length > 0
     end
 
-    def initialize_content_and_indices
+    def initialize_content
       @initialized_content = false
       @content = []
-      each_with_index do |element, i|
+      each do |element|
         if element.respond_to?(:parent=)
           element.parent = self
         end
         @content << element
-        element.index = i
       end
       @initialized_content = true
+    end
+
+    def initialize_indices
+      each_with_index do |element, i|
+        element.index = i
+      end
     end
 
     def inspect
@@ -189,6 +195,67 @@ module ERBGrammar
       end
     end
 
+    def split_out_erb_newlines
+      index = 0
+      num_children = @content.length
+      while index < num_children
+        child = @content[index]
+        unless child.is_a?(ERBTag)
+          index += 1
+          next
+        end
+        code = child.ruby_code()
+        unless code =~ NEW_LINE
+          index += 1
+          next
+        end
+        split_code = code.split(NEW_LINE)
+        contained_units = ERBDocument.get_code_units(split_code)
+        if contained_units.empty?
+          contained_units = ERBDocument.split_out_ends(split_code)
+        end
+        #puts "This code:"
+        #pp split_code
+        #puts "Becomes these code units:"
+        #pp contained_units
+        unless contained_units.empty?
+          child.overridden_ruby_code = code
+          contained_units.each do |code_line|
+            cur_code = child.overridden_ruby_code
+            replace_index = cur_code.index(code_line)
+            replace_index_end = replace_index + code_line.length
+            before_chunk = cur_code[0...replace_index]
+            after_chunk = cur_code[replace_index_end+1...cur_code.length]
+            child_goes_before = false
+            replacement_code = if before_chunk.nil? || before_chunk.blank?
+                                 child_goes_before = true
+                                 after_chunk || ''
+                               elsif after_chunk.nil? || after_chunk.blank?
+                                 child_goes_before = false
+                                 before_chunk || ''
+                               else
+                                 child_goes_before = true
+                                 before_chunk + after_chunk
+                               end
+            unless replacement_code.blank?
+              new_child = child.dup()
+              new_child.overridden_ruby_code = code_line
+              child.overridden_ruby_code = replacement_code
+              #puts "Replacing #{cur_code}\nWith #{child.overridden_ruby_code}"
+              if child_goes_before
+                #puts "Inserting new child before old child:\nNew child: " + new_child.to_s + "\nOld child: " + child.to_s
+                @content.insert(index, new_child)
+              else
+                #puts "Inserting new child after old child:\nOld child: " + child.to_s + "\nNew child: " + new_child.to_s
+                @content.insert(index+1, new_child)
+              end
+            end
+          end
+        end
+        index += 1
+      end # while
+    end
+
     def to_s(indent_level=0)
       map(&:to_s).select { |str| !str.blank? }.join("\n")
     end
@@ -222,16 +289,19 @@ module ERBGrammar
       end
 
       def self.find_code_units(code_elements, content)
+        #puts "All code elements:"
+        #pp code_elements
         num_elements = code_elements.length
         start_index = end_index = 0
         while start_index < num_elements
-          #puts "Looking at range " + (start_index..end_index).to_s
           while end_index < num_elements
             range = start_index..end_index
             #puts "Looking at range " + range.to_s
             unit_elements = code_elements[range]
             #pp unit_elements.map(&:class).map(&:name)
-            unit_lines = unit_elements.map(&:ruby_code)
+            unit_lines = unit_elements.map(&:ruby_code)#.map do |code_line|
+#              code_line.split(NEW_LINE)
+#            end.flatten
             #puts "--Checking code for code unit:"
             #pp unit_lines
             #puts "\n"
@@ -254,6 +324,35 @@ module ERBGrammar
           start_index += 1
           end_index = start_index
         end
+      end
+
+      def self.get_code_units(code_elements)
+        code_units = []
+        num_elements = code_elements.length
+        start_index = end_index = 0
+        while start_index < num_elements
+          while end_index < num_elements
+            range = start_index..end_index
+            unit_lines = code_elements[range]
+            end_index += 1
+            begin
+              joined_lines = unit_lines.join("\n")
+              # Call #dup because otherwise end up with pound sign added to
+              # beginning O_o:
+              @@parser.parse(joined_lines.dup)
+              code_units << joined_lines
+              start_index = end_index
+            rescue Racc::ParseError
+            end
+          end
+
+          # Once finding an outer code unit, should then check
+          # start_index+1 to end_index-1 and so on inward to see if
+          # any inner, nested code units exist
+          start_index += 1
+          end_index = start_index
+        end
+        code_units
       end
 
       def self.setup_code_unit(unit_elements, sexp, content)
@@ -290,6 +389,17 @@ module ERBGrammar
           #puts "---"
           find_code_units(extract_ruby_code_elements(opening.content), opening.content)
         end
+      end
+
+      def self.split_out_ends(code_lines)
+        code_lines.collect do |line|
+          unless line.nil?
+            normalized_line = line.strip.downcase
+            if 'end' == normalized_line || '}' == normalized_line
+              line
+            end
+          end
+        end.compact
       end
   end
 end

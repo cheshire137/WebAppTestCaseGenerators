@@ -1,13 +1,9 @@
 module SharedERBMethods
   def ==(other)
-	super(other) && prop_eql?(other, :code)
+	super(other) && prop_eql?(other, :ruby_code)
   end
 
   def hash
-	prop_hash(:code)
-  end
-
-  def ruby_code
-	code.content_removing_trims
+	prop_hash(:ruby_code)
   end
 end

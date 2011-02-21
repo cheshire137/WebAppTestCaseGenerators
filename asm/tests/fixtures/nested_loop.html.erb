@@ -1,0 +1,14 @@
+<div id="game_area">
+  <% #Write out a hidden AJAX (remote) form to submit cards.
+    form_remote_tag(:url => url_for(:action => "handle_card_submit"),
+                   :html => {:id => 'cardform'}) do %>
+    <%= hidden_field_tag 'form', 'card_submission' %>
+    <%  #Write out the cards for the user to see, along with hidden checkboxes.
+        @cards.each_with_index do |card, count| %>
+        <%= '<br style="clear: left;"/>' if count % @cards_per_row == 0 %>
+        <%= display_card(card, session[:user][:color_blind]) %>
+        <%= check_box_tag('cards[]', card.id, false, :id => "card#{card.id}", :class => 'display_none') %>
+        <% 
+    end
+  end %>
+</div><!--game_area-->

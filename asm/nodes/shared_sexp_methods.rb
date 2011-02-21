@@ -1,6 +1,8 @@
 require 'pp'
 
 module SharedSexpMethods
+  ITERATION_METHODS = [:each, :each_with_index, :each_cons, :each_entry,
+    :each_slice, :each_with_object].freeze
   attr_accessor :sexp
 
   module ClassMethods
@@ -70,7 +72,9 @@ module SharedSexpMethods
     return unless @sexp.nil?
     parser = RubyParser.new
     begin
-      @sexp = parser.parse(ruby_code())
+      # Call dup() otherwise ERBTag Ruby comments end up with multiple pound
+      # signs at the beginning (?!)
+      @sexp = parser.parse(ruby_code().dup())
     rescue Racc::ParseError
       @sexp = :invalid_ruby
     end
@@ -230,7 +234,6 @@ module SharedSexpMethods
     end
   end
 
-
   # p -> p1* (loops)
   def iteration?
     set_sexp() if @sexp.nil?
@@ -246,7 +249,7 @@ module SharedSexpMethods
     #   s(:arglist)),
     #  s(:lasgn, :score))
     if self.class.sexp_outer_keyword?(@sexp, :iter) &&
-       self.class.sexp_outer_call?(@sexp[1], :each)
+       sexp_calls_enumerable_method?(@sexp[1])
       #puts "Sexp has a call to :each in iterator--iteration!\n"
       return true
     end
@@ -258,7 +261,7 @@ module SharedSexpMethods
         return true
       end
     end
-    if self.class.sexp_outer_call?(@sexp, :each)
+    if sexp_calls_enumerable_method?(@sexp)
 #      puts "Sexp has a call to :each--iteration!\n"
       return true 
     end
@@ -276,6 +279,13 @@ module SharedSexpMethods
   end
 
   private
+    def sexp_calls_enumerable_method?(sexp)
+      ITERATION_METHODS.each do |method_name|
+        return true if self.class.sexp_outer_call?(sexp, method_name)
+      end
+      false
+    end
+
     def lines_consecutive_in_sexp?(needle, haystack)
       return false if haystack.nil?
       found_each_line_consecutively = true
@@ -297,7 +307,7 @@ module SharedSexpMethods
     end
 
     def sexp_contains_sexp?(needle, haystack)
-      return false if :invalid_ruby == needle || haystack.nil?
+      return false if haystack.nil? || needle.nil? || :invalid_ruby == needle
       unless needle.is_a?(Sexp)
         raise ArgumentError, "Expected parameter to be of type Sexp, got " + needle.class.name
       end
