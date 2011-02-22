@@ -1,7 +1,7 @@
 class ComponentInteractionModel
   attr_reader :site_root, :start_page, :component_expression, :atomic_sections, :transitions
 
-  def initialize(root_of_site, start_page, comp_expr, sections)
+  def initialize(root_of_site, start_page, comp_expr, sections, trans)
     if root_of_site.nil? || root_of_site.blank?
       raise ArgumentError, "Cannot have a nil/blank site root"
     end
@@ -14,11 +14,14 @@ class ComponentInteractionModel
     if sections.nil? || !sections.is_a?(Array) || sections.empty?
       raise ArgumentError, "Must give at least 1 atomic section in Array (got #{sections.class.name})"
     end
+    if trans.nil? || !trans.is_a?(Array)
+      raise ArgumentError, "Must give a non-nil Array of transitions (got #{trans.class.name})"
+    end
     @site_root = root_of_site.gsub(/(\/?|\\?)+$/, '')
     @start_page = start_page
     @component_expression = comp_expr
     @atomic_sections = sections
-    @transitions = []
+    @transitions = trans
   end
 
   def controller
@@ -42,6 +45,9 @@ class ComponentInteractionModel
   end
 
   def to_s
-    sprintf("Component Interaction Model\n\tStart page: %s\n\tStart URL: %s\n\tComponent expression: %s\n", @start_page, start_url(), @component_expression)
+    trans_str = @transitions.collect do |trans|
+      trans.to_s("\t")
+    end.join("\n")
+    sprintf("Component Interaction Model\n\tStart page: %s\n\tStart URL: %s\n\tComponent expression: %s\n\tTransitions:\n\t%s", @start_page, start_url(), @component_expression, trans_str)
   end
 end

@@ -5,6 +5,7 @@ module ERBGrammar
     include SharedSexpParsing
     include SharedSexpMethods
     extend SharedSexpMethods::ClassMethods
+    include SharedTransitionMethods
     attr_accessor :content, :close
 
 	def ==(other)
@@ -17,6 +18,18 @@ module ERBGrammar
 
     def attributes_str
       attrs.empty? ? '' : attrs.to_s
+    end
+
+    def get_local_transitions(source)
+      trans = []
+      tag_name = name()
+      # TODO: fill in correct sink
+      if 'form' == tag_name
+        trans << FormTransition.new(source, 'placeholder for sink', text_value)
+      elsif 'a' == tag_name
+        trans << LinkTransition.new(source, 'placeholder for sink', text_value)
+      end
+      trans
     end
 
     def hash

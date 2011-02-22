@@ -6,6 +6,26 @@ module SharedSexpMethods
   attr_accessor :sexp
 
   module ClassMethods
+    # If the given Sexp contains a call to the given method name, the Sexp
+    # representing the arguments passed in that method call will be returned.
+    # Otherwise, nil is returned.
+    def get_sexp_for_call_args(sexp, method_name)
+      unless method_name.is_a?(Symbol)
+        raise ArgumentError, "method_name must be a Symbol"
+      end
+      return nil if sexp.nil? || method_name.nil? || !sexp.is_a?(Enumerable)
+      if :call == sexp.first && (!sexp[1].nil? && method_name == sexp[1][2] || method_name == sexp[2])
+        args = sexp[3]
+        return nil if args.nil?
+        return nil if :arglist != args[0]
+        args[1...args.length]
+      elsif sexp.is_a?(Sexp)
+        get_sexp_for_call_args(sexp[1], method_name)
+      else
+        nil
+      end
+    end
+
     def sexp_include_call?(sexp, method_name)
       # e.g., sexp =
       # s(:iter,
@@ -26,6 +46,29 @@ module SharedSexpMethods
       else
         sexp_include_call?(sexp[1], method_name)
       end
+    end
+
+    def get_sexp_hash_value(sexp, key)
+      return nil if sexp.nil? || !sexp.is_a?(Enumerable) || :hash != sexp.first
+      if key.nil?
+        raise ArgumentError, "Expected non-nil hash key to look up in Sexp"
+      end
+      key = key.to_s.downcase
+      key_value_pairs = sexp[1...sexp.length]
+      # Sample:
+      # s(:hash,
+      #  s(:lit, :action),
+      #  s(:str, "try_login"),
+      #  s(:lit, :method),
+      #  s(:lit, :post))
+      # Keys are on even indices, values on the following odd index
+      num_pairs = key_value_pairs.length
+      key_value_pairs.each_with_index do |key_or_value, i|
+        if i.even? && key_or_value[1].to_s.downcase == key && i+1 < num_pairs
+          return key_value_pairs[i+1][1]
+        end
+      end
+      nil
     end
 
     def sexp_outer_call?(sexp, method_name)
@@ -76,6 +119,10 @@ module SharedSexpMethods
       # signs at the beginning (?!)
       @sexp = parser.parse(ruby_code().dup())
     rescue Racc::ParseError
+      @sexp = :invalid_ruby
+    rescue SyntaxError
+      # Can occur when lines are split on ; and this happens in the
+      # middle of a string
       @sexp = :invalid_ruby
     end
     #pp @sexp

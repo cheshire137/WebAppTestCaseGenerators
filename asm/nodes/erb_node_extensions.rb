@@ -8,6 +8,7 @@ module ERBGrammar
   require File.join(BasePath, 'shared_open_tag_methods.rb')
   require File.join(BasePath, 'shared_sexp_methods.rb')
   require File.join(BasePath, 'shared_sexp_parsing.rb')
+  require File.join(BasePath, 'shared_transition_methods.rb')
   require File.join(BasePath, 'erb_document.rb')
   require File.join(BasePath, 'erb_output_tag.rb')
   require File.join(BasePath, 'fake_erb_output.rb')

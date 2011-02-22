@@ -42,7 +42,8 @@ Find.find(views_path) do |path|
       ast = Parser.new.parse(erb, path)
       expr = ast.component_expression()
       sections = ast.get_atomic_sections()
-      cim = ComponentInteractionModel.new(root_url, path, expr, sections)
+      trans = ast.get_transitions()
+      cim = ComponentInteractionModel.new(root_url, path, expr, sections, trans)
       puts cim.to_s + "\n"
     end
   end

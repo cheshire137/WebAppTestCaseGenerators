@@ -1,6 +1,9 @@
 require 'rubygems'
 require 'ruby_parser'
 require 'atomic_section.rb'
+require 'transition.rb'
+require 'form_transition.rb'
+require 'link_transition.rb'
 require 'range.rb'
 
 module ERBGrammar
@@ -9,6 +12,7 @@ module ERBGrammar
     include SharedAtomicSectionMethods
     extend SharedAtomicSectionMethods::ClassMethods
     include SharedChildrenMethods
+    include SharedTransitionMethods
     attr_reader :content, :initialized_content
     attr_accessor :source_file
     STATEMENT_END = /[\r\n;]/.freeze
@@ -72,6 +76,14 @@ module ERBGrammar
 
     def get_atomic_sections
       get_atomic_sections_recursive((@atomic_sections || []) + (@content || []))
+    end
+
+    def get_local_transitions(source)
+      []
+    end
+
+    def get_transitions
+      get_transitions_recursive((@atomic_sections || []) + (@content || []))
     end
 
     def identify_atomic_sections
@@ -336,6 +348,19 @@ module ERBGrammar
           end
         end
         sections
+      end
+
+      def get_transitions_recursive(nodes=[])
+        trans = []
+        nodes.each do |node|
+          if node.respond_to?(:transitions)
+            trans += node.transitions || []
+          end
+          if node.respond_to?(:content) && !node.content.nil?
+            trans += get_transitions_recursive(node.content)
+          end
+        end
+        trans
       end
 
       def self.extract_ruby_code_elements(nodes)

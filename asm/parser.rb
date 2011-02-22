@@ -27,6 +27,7 @@ class Parser
     tree.split_branches()
     tree.remove_duplicate_children()
     tree.source_file = file_name
+    tree.identify_transitions(tree.source_file)
     tree
   end
 

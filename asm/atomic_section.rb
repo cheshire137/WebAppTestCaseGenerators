@@ -1,6 +1,6 @@
-require File.join('nodes', 'fake_erb_output.rb')
 class AtomicSection
   include SharedMethods
+  include ERBGrammar::SharedTransitionMethods
   include SharedChildrenMethods
   include SharedSexpParsing
   include SharedSexpMethods
@@ -47,6 +47,10 @@ class AtomicSection
     expr = sprintf("p%d", @count)
     #puts "Component expr. segment from p#@count: " + expr
     expr
+  end
+
+  def get_local_transitions(source)
+    []
   end
 
   def include?(node)
