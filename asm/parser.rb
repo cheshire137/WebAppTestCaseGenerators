@@ -21,7 +21,7 @@ class Parser
     #puts '-------------'
 	#puts "Pairing HTML tags..."
 	#tree.pair_tags
-	tree.find_code_units()
+	tree.setup_code_units()
     tree.identify_atomic_sections()
     tree.nest_atomic_sections()
     tree.split_branches()

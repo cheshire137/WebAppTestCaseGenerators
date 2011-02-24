@@ -38,15 +38,8 @@ module ERBGrammar
         LINK_METHODS.each do |link_method|
           link_args = ERBOutputTag.get_sexp_for_call_args(sexp, link_method)
           unless link_args.nil?
-            #puts "Found call to #{link_method}() with args:"
-            #pp link_args
-            #puts "Sexp:"
-            #pp @sexp
-            args_hash = link_args.find { |sexp| :hash == sexp.first }
-            unless args_hash.nil?
-              controller = (ERBTag.get_sexp_hash_value(args_hash, :controller) || '').to_s
-              action = (ERBTag.get_sexp_hash_value(args_hash, :action) || '').to_s
-              sink = sprintf("%s/%s", controller, action)
+            sink = get_target_page_from_sexp(link_args)
+            unless sink.nil?
               transitions << LinkTransition.new(source, sink, ruby_code())
             end
           end

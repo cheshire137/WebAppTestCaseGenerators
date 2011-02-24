@@ -28,4 +28,20 @@ module SharedChildrenMethods
     #puts "NOW PARENT IS #{to_s}"
     #puts "--------------------------------\n\n\n"
   end
+
+  def remove_duplicate_children
+	return if @content.nil?
+	@content.each do |child|
+	  #puts "Looking at child #{child.class.name}: #{child.range}"
+	  has_content = child.respond_to?(:content) && !child.content.nil? && !child.content.empty?
+	  has_close = child.respond_to?(:close) && !child.close.nil?
+	  if has_content && has_close
+		#puts "Deleting range #{child.content.first.index}..#{child.close.index}"
+		delete_children_in_range(child.content.first.index, child.close.index)
+	  end
+	  if child.respond_to?(:remove_duplicate_children)
+		child.remove_duplicate_children()
+	  end
+	end
+  end
 end

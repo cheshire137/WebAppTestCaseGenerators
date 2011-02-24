@@ -46,8 +46,8 @@ class ComponentInteractionModel
 
   def to_s
     trans_str = @transitions.collect do |trans|
-      trans.to_s("\t")
+      trans.to_s("\t\t")
     end.join("\n")
-    sprintf("Component Interaction Model\n\tStart page: %s\n\tStart URL: %s\n\tComponent expression: %s\n\tTransitions:\n\t%s", @start_page, start_url(), @component_expression, trans_str)
+    sprintf("Component Interaction Model\n\tStart page: %s\n\tStart URL: %s\n\tComponent expression: %s\n\tTransitions:\n%s", @start_page, start_url(), @component_expression, trans_str)
   end
 end

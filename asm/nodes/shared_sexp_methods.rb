@@ -3,6 +3,7 @@ require 'pp'
 module SharedSexpMethods
   ITERATION_METHODS = [:each, :each_with_index, :each_cons, :each_entry,
     :each_slice, :each_with_object].freeze
+  URL_METHODS = [:url_for].freeze
   attr_accessor :sexp
 
   module ClassMethods
@@ -16,6 +17,9 @@ module SharedSexpMethods
       return nil if sexp.nil? || method_name.nil? || !sexp.is_a?(Enumerable)
       if :call == sexp.first && (!sexp[1].nil? && method_name == sexp[1][2] || method_name == sexp[2])
         args = sexp[3]
+        #puts "Found args:"
+        #pp args
+        #puts ''
         return nil if args.nil?
         return nil if :arglist != args[0]
         args[1...args.length]
@@ -65,7 +69,12 @@ module SharedSexpMethods
       num_pairs = key_value_pairs.length
       key_value_pairs.each_with_index do |key_or_value, i|
         if i.even? && key_or_value[1].to_s.downcase == key && i+1 < num_pairs
-          return key_value_pairs[i+1][1]
+          value_sexp = key_value_pairs[i+1]
+          if value_sexp.length == 2
+            return value_sexp[1]
+          else
+            return value_sexp
+          end
         end
       end
       nil
@@ -86,6 +95,32 @@ module SharedSexpMethods
       return false if sexp.nil? || keyword.nil? || !sexp.is_a?(Enumerable)
       keyword == sexp.first
     end
+  end
+
+  # Tries to extract a URL from the given Sexp.  Looks for calls to the Rails
+  # method url_for(), as well as plain string URLs, as well as
+  # controller/action hashes.
+  def get_target_page_from_sexp(sexp_args)
+    sexp_args.each do |sexp|
+      controller = self.class.get_sexp_hash_value(sexp, :controller)
+      action = self.class.get_sexp_hash_value(sexp, :action)
+      unless controller.nil? && action.nil?
+        return RailsURL.new(controller, action, nil) 
+      end
+      url = self.class.get_sexp_hash_value(sexp, :url)
+      unless url.nil?
+        return RailsURL.new(nil, nil, url) if url.is_a?(String)
+        if url.is_a?(Sexp)
+          URL_METHODS.each do |url_method|
+            url_args = self.class.get_sexp_for_call_args(url, url_method)
+            unless url_args.nil?
+              return get_target_page_from_sexp(url_args)
+            end
+          end
+        end
+      end
+    end
+    nil
   end
 
   def sexp_include_call?(sexp, method_name)

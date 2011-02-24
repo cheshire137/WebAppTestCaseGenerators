@@ -6,8 +6,8 @@ class Transition
       raise ArgumentError, "Given source of transition cannot be blank or nil, and must be a String (got #{src.class.name})"
     end
     @source = src
-    if snk.nil? || !snk.is_a?(String) || snk.blank?
-      raise ArgumentError, "Given sink of transition cannot be blank or nil, and must be a String (got #{snk.class.name})"
+    if snk.nil? || !snk.is_a?(RailsURL)
+      raise ArgumentError, "Given sink of transition cannot be nil, and must be a RailsURL (got #{snk.class.name})"
     end
     @sink = snk
     if c.nil? || !c.is_a?(String) || c.blank?
@@ -21,6 +21,6 @@ class Transition
   end
 
   def to_s(prefix='')
-    sprintf("%sTransition\n%s\t<%s> --> <%s>\n%s\tUnderlying code: %s", prefix, prefix, @source, @sink, prefix, @code)
+    sprintf("\t%s<%s> --> <%s>\n%s\tUnderlying code: %s", prefix, @source, @sink, prefix, @code)
   end
 end

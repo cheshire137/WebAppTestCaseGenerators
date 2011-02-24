@@ -3,17 +3,13 @@ module ERBGrammar
     attr_reader :transitions
 
     def identify_transitions(source)
-#      puts "Getting local transitions for type #{self.class.name}"
+      #puts "Getting local transitions for: " + to_s().split("\n").first
       @transitions = get_local_transitions(source)
-      children = if respond_to?(:get_sections_and_nodes)
-                   get_sections_and_nodes()
-                 elsif respond_to?(:content)
-                   @content 
-                 else
-                   nil
-                 end || []
+      children = []
+      children += @content || [] if respond_to?(:content)
+      children += @atomic_sections || [] if respond_to?(:atomic_sections)
       children.each do |child|
-#        puts "Identifying transitions for child of type #{child.class.name}"
+        #puts "Identifying transitions for child: " + child.to_s
         if child.respond_to?(:identify_transitions)
           child.identify_transitions(source)
         end

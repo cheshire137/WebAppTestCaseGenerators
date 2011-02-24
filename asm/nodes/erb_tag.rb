@@ -9,6 +9,7 @@ module ERBGrammar
     include SharedTransitionMethods
     include SharedOpenTagMethods
     FORM_METHODS = [:form_tag, :form_remote_tag].freeze
+    REDIRECT_METHODS = [:redirect_to, :redirect_to_full_url].freeze
     attr_accessor :content, :parent, :close, :true_content, :false_content, :overridden_ruby_code
 
     def atomic_section_str(indent_level=0)
@@ -23,7 +24,9 @@ module ERBGrammar
 
     def get_local_transitions(source)
       set_sexp() if @sexp.nil?
-      get_form_transitions(source)
+      trans = get_form_transitions(source)
+      trans += get_redirect_transitions(source)
+      trans
     end
 
     def inspect
@@ -53,10 +56,10 @@ module ERBGrammar
       def get_form_transitions(source)
         transitions = []
         FORM_METHODS.each do |form_method|
-          form_args = ERBTag.get_sexp_for_call_args(sexp, form_method)
-          unless form_args.nil? || form_args.empty?
-            sink = get_target_page(form_args)
-            unless sink.blank?
+          form_args = ERBTag.get_sexp_for_call_args(@sexp, form_method)
+          unless form_args.nil?
+            sink = get_target_page_from_sexp(form_args)
+            unless sink.nil?
               transitions << FormTransition.new(source, sink, ruby_code())
             end
           end
@@ -64,10 +67,18 @@ module ERBGrammar
         transitions
       end
 
-      def get_target_page(sexp_args)
-        # Expand to check for url_for(), etc.
-        sexp_args = sexp_args.first
-        (ERBTag.get_sexp_hash_value(sexp_args, :action) || '').to_s
+      def get_redirect_transitions(source)
+        transitions = []
+        REDIRECT_METHODS.each do |redirect_method|
+          redirect_args = ERBTag.get_sexp_for_call_args(@sexp, redirect_method)
+          unless redirect_args.nil?
+            sink = get_target_page_from_sexp(redirect_args)
+            unless sink.nil?
+              transitions << RedirectTransition.new(source, sink, ruby_code())
+            end
+          end
+        end
+        transitions
       end
   end
 end
