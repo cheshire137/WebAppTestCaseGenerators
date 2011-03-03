@@ -39,6 +39,10 @@ Find.find(views_path) do |path|
     file_type = File.basename(path.downcase).split('.').last
     if ERB_FILE_TYPES.include?(file_type)
       erb = IO.readlines(path).join
+      if erb.nil? || erb.blank?
+        printf("No data in file %s, skipping\n", path)
+        next
+      end
       ast = Parser.new.parse(erb, path)
       expr = ast.component_expression()
       sections = ast.get_atomic_sections()
