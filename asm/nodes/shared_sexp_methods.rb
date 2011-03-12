@@ -420,24 +420,6 @@ module SharedSexpMethods
       so_far
     end
 
-    def contained_or_equal_ignoring_lvars?(needle, haystack)
-      # Example:
-      # haystack = 
-      #s(:call,
-      #  nil,
-      #  :distance_of_time_in_words_to_now,
-      #  s(:arglist, s(:call, s(:lvar, :l), :updated_at, s(:arglist))))
-      #
-      # needle =
-      #s(:call,
-      # nil,
-      # :distance_of_time_in_words_to_now,
-      # s(:arglist,
-      #  s(:call, s(:call, nil, :l, s(:arglist)), :updated_at, s(:arglist))))
-      new_haystack = replace_lvars(haystack.to_a)
-      contained_or_equal?(needle.to_a, new_haystack)
-    end
-
     def sexp_contains_sexp?(needle, haystack)
       return false if haystack.nil? || needle.nil? || :invalid_ruby == needle
       unless needle.is_a?(Sexp)
@@ -447,6 +429,7 @@ module SharedSexpMethods
         raise ArgumentError, "Expected parameter to be of type Sexp, got " + haystack.class.name
       end
       set_sexp() if @sexp.nil?
+      puts ''
       if !selection?
         puts "Not a selection"
         return false
@@ -459,8 +442,30 @@ module SharedSexpMethods
         needle = needle[1...needle.length]
       end
       return true if contained_or_equal?(needle, haystack)
-      return true if lines_consecutive_in_sexp?(needle, haystack)
-      return true if contained_or_equal_ignoring_lvars?(needle, haystack)
+      if haystack.to_a.flatten.include?(:lvar)
+        # Example:
+        # haystack = 
+        #s(:call,
+        #  nil,
+        #  :distance_of_time_in_words_to_now,
+        #  s(:arglist, s(:call, s(:lvar, :l), :updated_at, s(:arglist))))
+        #
+        # needle =
+        #s(:call,
+        # nil,
+        # :distance_of_time_in_words_to_now,
+        # s(:arglist,
+        #  s(:call, s(:call, nil, :l, s(:arglist)), :updated_at, s(:arglist))))
+        new_needle = needle.to_a
+        new_haystack = replace_lvars(haystack.to_a)
+        if self.class.sexp_outer_keyword?(new_haystack, :block)
+          new_haystack = new_haystack[1...new_haystack.length]
+        end
+        return true if lines_consecutive_in_sexp?(new_needle, new_haystack)
+        return true if contained_or_equal?(new_needle, new_haystack)
+      else
+        return true if lines_consecutive_in_sexp?(needle, haystack)
+      end
       false
     end
 end
