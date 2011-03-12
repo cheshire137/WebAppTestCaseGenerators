@@ -1,0 +1,7 @@
+<% if l = @person.location %>
+  <%= distance_of_time_in_words_to_now(l.updated_at) %>
+<% else %>
+  <div class="profile_update_form_right">
+    -
+  </div>
+<% end %>

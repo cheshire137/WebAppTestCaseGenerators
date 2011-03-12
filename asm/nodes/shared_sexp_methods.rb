@@ -146,7 +146,7 @@ module SharedSexpMethods
   end
 
   def set_sexp
-    puts "Setting sexp for " + to_s
+    #puts "Setting sexp for " + to_s
     return unless @sexp.nil?
     parser = RubyParser.new
     begin
@@ -265,8 +265,6 @@ module SharedSexpMethods
         condition_pivot = @content.find do |child|
           child.respond_to?(:content=) && pivot_index == child.index
         end
-        puts "Found condition pivot at index #{pivot_index || 'nil'}:"
-        pp condition_pivot
         unless condition_pivot.nil?
           # Move if's close to be the close of this else
           condition_pivot.close = @close
@@ -384,6 +382,62 @@ module SharedSexpMethods
       found_each_line_consecutively
     end
 
+    def contained_or_equal?(needle, haystack)
+      #puts "Looking for "
+      #pp needle
+      #puts "\nIn:"
+      #pp haystack
+      #puts "\n\n"
+      if !haystack.nil? && (haystack.include?(needle) || haystack == needle)
+        #puts "Found it!"
+        return true
+      end
+      false
+    end
+
+    def replace_lvars(sexp_arr, so_far=[])
+      return so_far if sexp_arr.nil?
+      unless sexp_arr.is_a?(Array)
+        raise ArgumentError, "Expected Array, got #{sexp_arr.class.name}"
+      end
+      first_item = sexp_arr[0]
+      if :lvar == first_item
+        name = sexp_arr[1]
+        replacement = [:call, nil, name, [:arglist]]
+        so_far += replacement
+      else
+        if first_item.is_a?(Array)
+          replacement = replace_lvars(first_item, [])
+          so_far << replacement unless replacement.nil?
+        else
+          so_far << first_item
+        end
+        next_part = sexp_arr[1...sexp_arr.length]
+        unless next_part.empty?
+          replace_lvars(next_part, so_far)
+        end
+      end
+      so_far
+    end
+
+    def contained_or_equal_ignoring_lvars?(needle, haystack)
+      # Example:
+      # haystack = 
+      #s(:call,
+      #  nil,
+      #  :distance_of_time_in_words_to_now,
+      #  s(:arglist, s(:call, s(:lvar, :l), :updated_at, s(:arglist))))
+      #
+      # needle =
+      #s(:call,
+      # nil,
+      # :distance_of_time_in_words_to_now,
+      # s(:arglist,
+      #  s(:call, s(:call, nil, :l, s(:arglist)), :updated_at, s(:arglist))))
+      new_haystack = replace_lvars(haystack.to_a)
+      contained_or_equal?(needle.to_a, new_haystack)
+    end
+
     def sexp_contains_sexp?(needle, haystack)
       return false if haystack.nil? || needle.nil? || :invalid_ruby == needle
       unless needle.is_a?(Sexp)
@@ -397,27 +451,16 @@ module SharedSexpMethods
         puts "Not a selection"
         return false
       end
-      contained_or_equal = lambda do |n, h|
-        #puts "Looking for "
-        #pp n
-        #puts "\nIn:"
-        #pp h
-        #puts "\n\n"
-        if !h.nil? && (h.include?(n) || h == n)
-          #puts "Found it!"
-          return true
-        end
-        false
-      end
-      return true if contained_or_equal.call(needle, haystack)
+      return true if contained_or_equal?(needle, haystack)
       #if self.class.sexp_outer_keyword?(haystack, :block)
       #  haystack = haystack[1...haystack.length]
       #end
       if self.class.sexp_outer_keyword?(needle, :block)
         needle = needle[1...needle.length]
       end
-      return true if contained_or_equal.call(needle, haystack)
+      return true if contained_or_equal?(needle, haystack)
       return true if lines_consecutive_in_sexp?(needle, haystack)
+      return true if contained_or_equal_ignoring_lvars?(needle, haystack)
       false
     end
 end

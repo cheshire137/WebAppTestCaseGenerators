@@ -421,24 +421,15 @@ module ERBGrammar
           while end_index < num_elements
             range = start_index..end_index
             unit_elements = code_elements[range]
-            exclude_fakes = test_only_real_code_first?(unit_elements)
-            if exclude_fakes
-              elements_to_test = unit_elements.select do |e|
-                e.is_a?(ERBTag)
-              end
-            else
-              elements_to_test = unit_elements
+            erb_elements = unit_elements.select do |e|
+              e.is_a?(ERBTag)
             end
-            try_parse_code(parser, elements_to_test, code_method) do |sexp, joined_lines|
-              unless exclude_fakes
-                yield(sexp, joined_lines, elements_to_test)
-                start_index += 1
-              end
+            try_parse_code(parser, erb_elements, code_method) do |sexp, joined_lines|
               found_unit = true
             end
-            if found_unit && exclude_fakes
+            if found_unit
               found_unit = false
-              # Try parsing again, but with all the FakeERBOutput included
+              # Try parsing again, but with all the non-ERBTag included
               try_parse_code(parser, unit_elements, code_method) do |sexp, joined_lines|
                 yield(sexp, joined_lines, unit_elements)
                 start_index += 1
@@ -508,7 +499,7 @@ module ERBGrammar
           raise "Woah, how can I set up a code unit with no lines of code?"
         end
         opening = unit_elements.first
-        opening.sexp = sexp if opening.respond_to?('sexp=')
+        opening.sexp = sexp if opening.respond_to?('sexp=') && opening.sexp.nil?
         if len < 2
           #puts "--Found code unit:"
           #puts opening
