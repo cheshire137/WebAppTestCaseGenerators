@@ -49,7 +49,7 @@ module ERBGrammar
       close_prefix = close_string.blank? ? '' : sprintf("%sClose:\n", prefix * (indent_level+1))
       to_s_with_prefix(indent_level,
         sprintf("%s\n%s%s\n%s%s", ruby_code, content_prefix,
-                sections.join("\n"), close_prefix, close_string, prefix))
+                sections.join("\n"), close_prefix, close_string))
     end
 
     private

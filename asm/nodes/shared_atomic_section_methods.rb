@@ -209,9 +209,13 @@ module ERBGrammar
         #puts "True branch: " + true_branch
         #puts "False branch: " + false_branch
         #puts "--------------"
-        sprintf("(%s%s%s|%s%s%s)", opening_true_paren, true_branch,
-                closing_true_paren, opening_false_paren, false_branch,
-                closing_false_paren)
+        if (true_branch.blank? || 'NULL' == true_branch) && (false_branch.blank? || 'NULL' == false_branch)
+          nil
+        else
+          sprintf("(%s%s%s|%s%s%s)", opening_true_paren, true_branch,
+                  closing_true_paren, opening_false_paren, false_branch,
+                  closing_false_paren)
+        end
       end
 
       def nodes_to_atomic_section_content(sections)

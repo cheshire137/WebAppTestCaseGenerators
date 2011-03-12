@@ -3,8 +3,9 @@ module ERBGrammar
     include Enumerable
     include SharedMethods
     PlainHTMLTypes = [HTMLDirective, HTMLOpenTag, HTMLCloseTag, Whitespace, Text, HTMLDoctype, HTMLQuotedValue, HTMLSelfClosingTag, HTMLTagAttribute].freeze
-    BrowserOutputTypes = (PlainHTMLTypes + [ERBOutputTag]).freeze
-    RubyCodeTypes = [ERBTag, ERBOutputTag].freeze
+    ERBOutputTypes = [ERBOutputTag, ERBYield].freeze
+    BrowserOutputTypes = (PlainHTMLTypes + ERBOutputTypes).freeze
+    RubyCodeTypes = ([ERBTag] + ERBOutputTypes).freeze
     attr_accessor :index
     alias_method :old_to_s, :to_s
 

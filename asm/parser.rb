@@ -8,27 +8,38 @@ Treetop.load(File.join(base_path, 'erb_grammar.treetop'))
 class Parser
   @@parser = ERBGrammarParser.new
 
-  def parse(data, file_name)
+  def parse(data, file_name, debug_on=false)
     printf("Parsing ERB file %s...\n", file_name)
     tree = @@parser.parse data
     unless tree.nil?
+      puts "Initializing content..." if debug_on
       tree.initialize_content()
+      puts "Splitting out ERB newlines..." if debug_on
       tree.split_out_erb_newlines()
+      puts "Initializing indices..." if debug_on
       tree.initialize_indices()
       #pp tree
       #puts '-------------'
       #puts "Pairing HTML tags..."
       #tree.pair_tags
+      puts "Setting up code units..." if debug_on
       tree.setup_code_units()
+      puts "Identifying atomic sections..." if debug_on
       tree.identify_atomic_sections()
+      puts "Nesting atomic sections..." if debug_on
       tree.nest_atomic_sections()
+      puts "Splitting branches..." if debug_on
       tree.split_branches()
+      puts "Removing duplicate children..." if debug_on
       tree.remove_duplicate_children()
       tree.source_file = file_name
+      puts "Identifying transitions..." if debug_on
       tree.identify_transitions(tree.source_file)
     end
     tree
   rescue Racc::ParseError => err
+    printf("Failed to parse %s at offset %d: %s\n", file_name, @@parser.index, err)
+  rescue SyntaxError => err
     printf("Failed to parse %s at offset %d: %s\n", file_name, @@parser.index, err)
   end
 

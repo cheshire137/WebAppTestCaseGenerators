@@ -394,6 +394,21 @@ module ERBGrammar
         code_els
       end
 
+      def self.test_only_real_code_first?(unit_elements)
+        return false if unit_elements.nil? || unit_elements.empty?
+        classes = unit_elements.map(&:class)
+        return false unless classes.include?(FakeERBOutput)
+        num_total = classes.length
+        num_fake = classes.select { |c| c == FakeERBOutput }.length
+        return false if num_total == num_fake
+        ratio = (1.0 * num_fake) / num_total
+        if $DEBUG
+          printf("%d fake elements / %d elements = %0.2f per cent fake\n",
+                 num_fake, num_total, ratio*100)
+        end
+        ratio > 0.5
+      end
+
       def self.code_unit_iterator(code_elements, code_method=nil)
         unless block_given?
           raise ArgumentError, "Block required for code unit iterator"
@@ -406,27 +421,31 @@ module ERBGrammar
           while end_index < num_elements
             range = start_index..end_index
             unit_elements = code_elements[range]
-            if code_method.nil?
-              unit_lines = unit_elements
+            exclude_fakes = test_only_real_code_first?(unit_elements)
+            if exclude_fakes
+              elements_to_test = unit_elements.select do |e|
+                e.is_a?(ERBTag)
+              end
             else
-              unit_lines = unit_elements.map { |l| l.send(code_method) }
+              elements_to_test = unit_elements
             end
-            begin
-              joined_lines = unit_lines.join("\n")
-              # Call #dup because otherwise end up with pound sign added to
-              # beginning (?!):
-              sexp = parser.parse(joined_lines.dup())
+            try_parse_code(parser, elements_to_test, code_method) do |sexp, joined_lines|
+              unless exclude_fakes
+                yield(sexp, joined_lines, elements_to_test)
+                start_index += 1
+              end
               found_unit = true
-
-              # Since we made it past the parse(), these lines of Ruby code
-              # are valid together
-              yield(sexp, joined_lines, unit_elements)
-              start_index += 1
-            rescue Racc::ParseError
-            rescue SyntaxError
-              # Can occur when lines are split on ; and this happens in the
-              # middle of a string
             end
+            if found_unit && exclude_fakes
+              found_unit = false
+              # Try parsing again, but with all the FakeERBOutput included
+              try_parse_code(parser, unit_elements, code_method) do |sexp, joined_lines|
+                yield(sexp, joined_lines, unit_elements)
+                start_index += 1
+                found_unit = true
+              end
+            end
+
             if found_unit
               end_index = start_index
               break
@@ -445,6 +464,25 @@ module ERBGrammar
             end_index = start_index
           end
         end
+      end
+
+      def self.try_parse_code(parser, unit_elements, code_method)
+        if code_method.nil?
+          unit_lines = unit_elements
+        else
+          unit_lines = unit_elements.map { |l| l.send(code_method) }
+        end
+        joined_lines = unit_lines.join("\n")
+        # Call #dup because otherwise end up with pound sign added to
+        # beginning (?!):
+        sexp = parser.parse(joined_lines.dup())
+        # Since we made it past the parse(), these lines of Ruby code
+        # are valid together
+        yield(sexp, joined_lines)
+      rescue Racc::ParseError
+      rescue SyntaxError
+        # Can occur when lines are split on ; and this happens in the
+        # middle of a string
       end
 
       def self.setup_code_units(code_elements, content)

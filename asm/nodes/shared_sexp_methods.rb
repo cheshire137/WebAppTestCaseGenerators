@@ -146,7 +146,7 @@ module SharedSexpMethods
   end
 
   def set_sexp
-    #puts "Setting sexp for " + to_s
+    puts "Setting sexp for " + to_s
     return unless @sexp.nil?
     parser = RubyParser.new
     begin
@@ -206,12 +206,6 @@ module SharedSexpMethods
   end
 
   def split_branch
-    true_branch = @sexp[2]
-    false_branch = @sexp[3]
-    #puts "True branch:"
-    #pp true_branch
-    #puts "\nFalse branch:"
-    #pp false_branch
     atomic_sections = @atomic_sections || []
     #puts "\nAtomic sections:"
     #pp atomic_sections
@@ -271,6 +265,8 @@ module SharedSexpMethods
         condition_pivot = @content.find do |child|
           child.respond_to?(:content=) && pivot_index == child.index
         end
+        puts "Found condition pivot at index #{pivot_index || 'nil'}:"
+        pp condition_pivot
         unless condition_pivot.nil?
           # Move if's close to be the close of this else
           condition_pivot.close = @close

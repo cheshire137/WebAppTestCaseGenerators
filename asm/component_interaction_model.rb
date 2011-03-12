@@ -8,8 +8,8 @@ class ComponentInteractionModel
     if start_page.nil? || start_page.blank?
       raise ArgumentError, "Cannot have a nil/blank start page"
     end
-    if comp_expr.nil? || comp_expr.blank?
-      raise ArgumentError, "Cannot have a nil/blank component expression"
+    if comp_expr.nil?
+      raise ArgumentError, "Cannot have a nil component expression"
     end
     if sections.nil? || !sections.is_a?(Array) || sections.empty?
       raise ArgumentError, "Must give at least 1 atomic section in Array (got #{sections.class.name})"
