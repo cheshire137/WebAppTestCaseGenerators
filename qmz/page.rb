@@ -1,9 +1,11 @@
 require 'rubygems'
-require 'nokogiri'
 require 'uri_extensions.rb'
 require 'open-uri'
+require File.join('..', 'html_parsing.rb')
 
 class Page
+  include SharedHtmlParsing
+  extend SharedHtmlParsing::ClassMethods
   attr_reader :uri, :links, :uri_parts
   attr_accessor :is_copy, :link_uris, :link_uri_parts
 
@@ -70,70 +72,4 @@ class Page
     str << ')'
     str
   end
-
-  private
-    def Page.get_uri_for_host(str, host_uri)
-      if str.nil?
-        raise ArgumentError, "Cannot work with nil URI string"
-      end
-      unless str.is_a? String
-        raise ArgumentError,
-          "Given URI string must be a String, was given a(n) " + str.class.name
-      end
-      unless host_uri.is_a? URI
-        raise ArgumentError, "Given host must be a URI, was given a(n) " +
-          host_uri.class.name
-      end
-      uri = parse_uri_forgivingly(str)
-      if !uri.nil? && uri.is_a?(URI::Generic) && uri.host.nil?
-        uri = parse_uri_forgivingly(
-          sprintf("%s://%s%s", host_uri.scheme, host_uri.host, uri.to_s)
-        )
-      end
-      uri
-    end
-
-
-    def Page.get_link_uris(root_uri, html)
-      target_host = root_uri.host
-      doc = Nokogiri::HTML(html)
-      hyperlink_uris = extract_uris_on_host(
-        doc.css('a').select do |link|
-          !link['href'].nil?
-        end.collect do |link|
-          get_uri_for_host(link['href'], root_uri)
-        end,
-        target_host
-      )
-      button_uris = extract_uris_on_host(
-        doc.css('form').select do |form|
-          if form['action'].nil?
-            false
-          else
-            input_types = form.css('input').collect do |input|
-              input['type']
-            end.map(&:downcase)
-            input_types.include?('submit') || input_types.include?('image')
-          end
-        end.collect do |form|
-          get_uri_for_host(form['action'], root_uri)
-        end,
-        target_host
-      )
-      (hyperlink_uris + button_uris).uniq
-    end
-
-    def Page.extract_uris_on_host(uris, target_host)
-      uris.compact.select do |uri|
-        target_host == uri.host
-      end.uniq
-    end
-
-    def Page.parse_uri_forgivingly(str)
-      begin
-        URI.parse(str)
-      rescue URI::InvalidURIError
-        nil
-      end
-    end
 end
