@@ -27,10 +27,15 @@ module ERBGrammar
     def get_local_transitions(source)
       trans = []
       tag_name = name()
-	  HTMLOpenTag.get_link_uris(source, text_value).each do |sink|
+	  if source.is_a?(RailsURL)
+		source_uri = URI.parse(source.to_s)
+	  else
+		source_uri = source
+	  end
+	  HTMLOpenTag.get_link_uris(source_uri, text_value).each do |sink|
 		trans << LinkTransition.new(source, RailsURL.from_uri(sink), text_value)
 	  end
-	  HTMLOpenTag.get_form_uris(source, text_value).each do |sink|
+	  HTMLOpenTag.get_form_uris(source_uri, text_value).each do |sink|
         trans << FormTransition.new(source, RailsURL.from_uri(sink), text_value)
 	  end
       trans

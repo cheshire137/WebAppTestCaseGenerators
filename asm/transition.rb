@@ -4,8 +4,8 @@ class Transition
   attr_reader :source, :sink, :code
 
   def initialize(src, snk, c)
-    if src.nil? || (!src.is_a?(String) && !src.is_a?(URI))
-      raise ArgumentError, "Given source of transition cannot be nil, and must be a String or URI (got #{src.class.name})"
+    if src.nil?
+      raise ArgumentError, "Given source of transition cannot be nil"
     end
 	if src.is_a?(String)
 	  @source = URI.parse(src)

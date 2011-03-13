@@ -33,7 +33,12 @@ class Parser
       puts "Removing duplicate children..." if debug_on
       tree.remove_duplicate_children()
       puts "Identifying transitions..." if debug_on
-      tree.identify_transitions(root_url)
+      src_rails_url = RailsURL.from_path(file_name)
+      if src_rails_url.nil?
+        printf("Could not interpret path %s as a Rails URL, skipping transition identification\n", file_name)
+      else
+        tree.identify_transitions(src_rails_url, root_url)
+      end
       tree.source_file = file_name
     end
     tree
