@@ -58,7 +58,7 @@ module ERBGrammar
         FORM_METHODS.each do |form_method|
           form_args = ERBTag.get_sexp_for_call_args(@sexp, form_method)
           unless form_args.nil?
-            sink = get_target_page_from_sexp(form_args)
+            sink = get_target_page_from_sexp(form_args, source)
             unless sink.nil?
               transitions << FormTransition.new(source, sink, ruby_code())
             end
@@ -72,7 +72,7 @@ module ERBGrammar
         REDIRECT_METHODS.each do |redirect_method|
           redirect_args = ERBTag.get_sexp_for_call_args(@sexp, redirect_method)
           unless redirect_args.nil?
-            sink = get_target_page_from_sexp(redirect_args)
+            sink = get_target_page_from_sexp(redirect_args, source)
             unless sink.nil?
               transitions << RedirectTransition.new(source, sink, ruby_code())
             end

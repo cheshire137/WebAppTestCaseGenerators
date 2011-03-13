@@ -100,11 +100,16 @@ module SharedSexpMethods
   # Tries to extract a URL from the given Sexp.  Looks for calls to the Rails
   # method url_for(), as well as plain string URLs, as well as
   # controller/action hashes.
-  def get_target_page_from_sexp(sexp_args)
+  def get_target_page_from_sexp(sexp_args, source=nil)
+    if source.nil? || !source.respond_to?(:controller)
+      src_controller = nil
+    else
+      src_controller = source.controller
+    end
     sexp_args.each do |sexp|
-      controller = self.class.get_sexp_hash_value(sexp, :controller)
+      controller = self.class.get_sexp_hash_value(sexp, :controller) || src_controller
       action = self.class.get_sexp_hash_value(sexp, :action)
-      unless controller.nil? && action.nil?
+      unless action.nil?
         return RailsURL.new(controller, action, nil) 
       end
       url = self.class.get_sexp_hash_value(sexp, :url)
@@ -114,7 +119,7 @@ module SharedSexpMethods
           URL_METHODS.each do |url_method|
             url_args = self.class.get_sexp_for_call_args(url, url_method)
             unless url_args.nil?
-              return get_target_page_from_sexp(url_args)
+              return get_target_page_from_sexp(url_args, source)
             end
           end
         end
