@@ -1,3 +1,5 @@
+require File.join('..', 'html_parsing.rb')
+
 module ERBGrammar
   class HTMLOpenTag < Treetop::Runtime::SyntaxNode
 	include SharedOpenTagMethods
@@ -6,6 +8,8 @@ module ERBGrammar
     include SharedSexpMethods
     extend SharedSexpMethods::ClassMethods
     include SharedTransitionMethods
+	include SharedHtmlParsing
+	extend SharedHtmlParsing::ClassMethods
     attr_accessor :content, :close
 
 	def ==(other)
@@ -23,12 +27,12 @@ module ERBGrammar
     def get_local_transitions(source)
       trans = []
       tag_name = name()
-      # TODO: fill in correct sink
-      if 'form' == tag_name
-        trans << FormTransition.new(source, 'placeholder for sink', text_value)
-      elsif 'a' == tag_name
-        trans << LinkTransition.new(source, 'placeholder for sink', text_value)
-      end
+	  HTMLOpenTag.get_link_uris(source, text_value).each do |sink|
+		trans << LinkTransition.new(source, RailsURL.from_uri(sink), text_value)
+	  end
+	  HTMLOpenTag.get_form_uris(source, text_value).each do |sink|
+        trans << FormTransition.new(source, RailsURL.from_uri(sink), text_value)
+	  end
       trans
     end
 

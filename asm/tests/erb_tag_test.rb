@@ -4,7 +4,7 @@ require File.join(base_path, 'test_helper.rb')
 
 class ERBTagTest < Test::Unit::TestCase
   def test_iteration?
-    doc = Parser.new.parse(fixture('iteration.html'), 'iteration.html.erb')
+    doc = Parser.new.parse(fixture('iteration.html'), 'iteration.html.erb', URI.parse('/'))
     assert_not_nil doc
     loops = [doc[0], doc[4], doc[5], doc[8], doc[10]]
     loops.each do |loop_tag|

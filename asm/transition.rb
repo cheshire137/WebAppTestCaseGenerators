@@ -1,11 +1,17 @@
+require 'uri'
+
 class Transition
   attr_reader :source, :sink, :code
 
   def initialize(src, snk, c)
-    if src.nil? || !src.is_a?(String) || src.blank?
-      raise ArgumentError, "Given source of transition cannot be blank or nil, and must be a String (got #{src.class.name})"
+    if src.nil? || (!src.is_a?(String) && !src.is_a?(URI))
+      raise ArgumentError, "Given source of transition cannot be nil, and must be a String or URI (got #{src.class.name})"
     end
-    @source = src
+	if src.is_a?(String)
+	  @source = URI.parse(src)
+	else
+	  @source = src
+	end
     if snk.nil? || !snk.is_a?(RailsURL)
       raise ArgumentError, "Given sink of transition cannot be nil, and must be a RailsURL (got #{snk.class.name})"
     end

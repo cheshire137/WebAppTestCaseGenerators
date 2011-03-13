@@ -429,7 +429,6 @@ module SharedSexpMethods
         raise ArgumentError, "Expected parameter to be of type Sexp, got " + haystack.class.name
       end
       set_sexp() if @sexp.nil?
-      puts ''
       if !selection?
         puts "Not a selection"
         return false

@@ -1,3 +1,5 @@
+require 'uri'
+
 class RailsURL
   attr_reader :action, :controller, :raw_url, :site_root
 
@@ -9,6 +11,13 @@ class RailsURL
     @action = (act || '').strip.downcase
     @raw_url = (raw || '').strip.downcase
     @site_root = root.strip.downcase
+  end
+
+  def RailsURL.from_uri(uri)
+	if uri.nil? || !uri.is_a?(URI)
+	  raise ArgumentError, "Expected non-nil URI, got #{uri.class.name}"
+	end
+	RailsURL.new(nil, nil, uri.to_s)
   end
 
   def url

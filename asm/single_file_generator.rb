@@ -25,9 +25,14 @@ unless ARGV.length == 2
 end
 
 path = ARGV.shift
-root_url = ARGV.shift
+begin
+  root_url = URI.parse(ARGV.shift)
+rescue URI::InvalidURIError => err
+  printf("ERROR: could not parse given root URI: %s", err)
+  exit
+end
 erb = IO.readlines(path).join
-ast = Parser.new.parse(erb, path, options[:debug])
+ast = Parser.new.parse(erb, path, root_url, options[:debug])
 pp ast
 expr = ast.component_expression()
 sections = ast.get_atomic_sections()

@@ -8,7 +8,7 @@ Treetop.load(File.join(base_path, 'erb_grammar.treetop'))
 class Parser
   @@parser = ERBGrammarParser.new
 
-  def parse(data, file_name, debug_on=false)
+  def parse(data, file_name, root_url, debug_on=false)
     printf("Parsing ERB file %s...\n", file_name)
     tree = @@parser.parse data
     unless tree.nil?
@@ -32,9 +32,9 @@ class Parser
       tree.split_branches()
       puts "Removing duplicate children..." if debug_on
       tree.remove_duplicate_children()
-      tree.source_file = file_name
       puts "Identifying transitions..." if debug_on
-      tree.identify_transitions(tree.source_file)
+      tree.identify_transitions(root_url)
+      tree.source_file = file_name
     end
     tree
   rescue Racc::ParseError => err

@@ -2,8 +2,8 @@ class ComponentInteractionModel
   attr_reader :site_root, :start_page, :component_expression, :atomic_sections, :transitions
 
   def initialize(root_of_site, start_page, comp_expr, sections, trans)
-    if root_of_site.nil? || root_of_site.blank?
-      raise ArgumentError, "Cannot have a nil/blank site root"
+    if root_of_site.nil?
+      raise ArgumentError, "Cannot have a nil site root"
     end
     if start_page.nil? || start_page.blank?
       raise ArgumentError, "Cannot have a nil/blank start page"
@@ -17,7 +17,7 @@ class ComponentInteractionModel
     if trans.nil? || !trans.is_a?(Array)
       raise ArgumentError, "Must give a non-nil Array of transitions (got #{trans.class.name})"
     end
-    @site_root = root_of_site.gsub(/(\/?|\\?)+$/, '')
+    @site_root = root_of_site
     @start_page = start_page
     @component_expression = comp_expr
     @atomic_sections = sections

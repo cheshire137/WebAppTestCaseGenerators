@@ -73,7 +73,7 @@ class ERBDocumentTest < Test::Unit::TestCase
   end
 
   def test_delete_node
-	doc = Parser.new.parse(fixture('login_index.html'), 'login_index.html.erb')
+	doc = Parser.new.parse(fixture('login_index.html'), 'login_index.html.erb', URI.parse('/'))
 	assert_not_nil doc
 	form = doc[0]
 	assert_not_nil form
@@ -87,7 +87,7 @@ class ERBDocumentTest < Test::Unit::TestCase
   end
 
   def test_nested_atomic_section
-    doc = Parser.new.parse(fixture('_finished.html'), '_finished.html.erb')
+    doc = Parser.new.parse(fixture('_finished.html'), '_finished.html.erb', URI.parse('/'))
     assert_not_nil doc
     # The code in question:
     # <% #Check the state of the game and write out the winners, losers, and drawers.
@@ -122,7 +122,7 @@ class ERBDocumentTest < Test::Unit::TestCase
   end
 
   def test_square_bracket_accessor_fixnum
-	doc = Parser.new.parse(fixture('login_index.html'), 'login_index.html.erb')
+	doc = Parser.new.parse(fixture('login_index.html'), 'login_index.html.erb', URI.parse('/'))
 	assert_not_nil doc
 	form = doc[0]
 	assert_not_nil form
@@ -141,7 +141,7 @@ class ERBDocumentTest < Test::Unit::TestCase
   end
 
   def test_square_bracket_accessor_range
-	doc = Parser.new.parse(fixture('login_index.html'), 'login_index.html.erb')
+	doc = Parser.new.parse(fixture('login_index.html'), 'login_index.html.erb', URI.parse('/'))
 	assert_not_nil doc
 	elements = doc[0..1]
 	assert_equal Array, elements.class, "Expected Array return value"
@@ -151,7 +151,7 @@ class ERBDocumentTest < Test::Unit::TestCase
   end
 
   def test_length
-	doc = Parser.new.parse(fixture('login_index.html'), 'login_index.html.erb')
+	doc = Parser.new.parse(fixture('login_index.html'), 'login_index.html.erb', URI.parse('/'))
 	assert_not_nil doc
 	assert_equal 1, doc.length,
 	  "ERB document has all nodes nested within a form_tag, so doc should have length 1"
@@ -159,7 +159,7 @@ class ERBDocumentTest < Test::Unit::TestCase
 
   private
     def assert_component_expression(erb, file_name, expected)
-      doc = Parser.new.parse(erb, file_name)
+      doc = Parser.new.parse(erb, file_name, URI.parse('/'))
       assert_not_nil doc
       actual = doc.component_expression()
       assert_equal expected, actual, "Wrong component expression for " + file_name

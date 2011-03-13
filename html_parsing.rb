@@ -1,3 +1,4 @@
+require 'uri'
 require 'rubygems'
 require 'nokogiri'
 
@@ -22,7 +23,7 @@ module SharedHtmlParsing
           host_uri.class.name
       end
       uri = parse_uri_forgivingly(str)
-      if !uri.nil? && uri.is_a?(URI::Generic) && uri.host.nil?
+      if !uri.nil? && uri.is_a?(URI::Generic) && uri.host.nil? && !host_uri.is_a?(URI::Generic)
         uri = parse_uri_forgivingly(
           sprintf("%s://%s%s", host_uri.scheme, host_uri.host, uri.to_s)
         )
@@ -38,21 +39,13 @@ module SharedHtmlParsing
       end
     end
 
-    def get_link_uris(root_uri, html)
+	def get_form_uris(root_uri, html)
 	  if root_uri.nil? || !root_uri.is_a?(URI)
 		raise ArgumentError, "Expected URI, got #{root_uri.class.name}"
 	  end
       target_host = root_uri.host
       doc = Nokogiri::HTML(html)
-      hyperlink_uris = extract_uris_on_host(
-        doc.css('a').select do |link|
-          !link['href'].nil?
-        end.collect do |link|
-          get_uri_for_host(link['href'], root_uri)
-        end,
-        target_host
-      )
-      button_uris = extract_uris_on_host(
+	  extract_uris_on_host(
         doc.css('form').select do |form|
           if form['action'].nil?
             false
@@ -66,8 +59,21 @@ module SharedHtmlParsing
           get_uri_for_host(form['action'], root_uri)
         end,
         target_host
-      )
-      (hyperlink_uris + button_uris).uniq
+      ).uniq
+	end
+
+    def get_link_uris(root_uri, html)
+	  if root_uri.nil? || !root_uri.is_a?(URI)
+		raise ArgumentError, "Expected URI, got #{root_uri.class.name}"
+	  end
+      target_host = root_uri.host
+      doc = Nokogiri::HTML(html)
+	  all_uris = doc.css('a').select do |link|
+		!link['href'].nil?
+	  end.collect do |link|
+		get_uri_for_host(link['href'], root_uri)
+	  end
+      extract_uris_on_host(all_uris, target_host).uniq
     end
   end
 end

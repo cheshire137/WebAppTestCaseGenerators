@@ -27,7 +27,7 @@ class SyntaxNodeTest < Test::Unit::TestCase
 
   private
     def get_test_nodes
-      doc = Parser.new.parse(fixture('login_index.html'), 'login_index.html.erb')
+      doc = Parser.new.parse(fixture('login_index.html'), 'login_index.html.erb', URI.parse('/'))
       form_tag = doc[0]
       assert_equal ERBTag, form_tag.class
       section = form_tag.atomic_sections[0]

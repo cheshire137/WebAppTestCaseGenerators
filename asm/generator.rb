@@ -9,7 +9,12 @@ unless ARGV.length == 2
 end
 
 rails_root_path = ARGV.shift
-root_url = ARGV.shift
+begin
+  root_url = URI.parse(ARGV.shift)
+rescue URI::InvalidURIError => err
+  printf("ERROR: could not parse given root URI: %s", err)
+  exit
+end
 
 app_path = File.join(rails_root_path, 'app')
 unless File.exists?(app_path)
@@ -43,7 +48,11 @@ Find.find(views_path) do |path|
         printf("No data in file %s, skipping\n", path)
         next
       end
-      ast = Parser.new.parse(erb, path)
+      ast = Parser.new.parse(erb, path, root_url)
+	  if ast.nil?
+		printf("Could not parse file %s, skipping\n", path)
+		next
+	  end
       expr = ast.component_expression()
       sections = ast.get_atomic_sections()
       trans = ast.get_transitions()
