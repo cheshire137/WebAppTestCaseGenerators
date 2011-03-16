@@ -3,7 +3,7 @@ require 'page.rb'
 require 'link.rb'
 
 class PFD
-  PFDTemplateFile = 'pfd_template.html.erb'.freeze
+  PFDTemplateFile = 'ptt_template.html.erb'.freeze
   attr_reader :pages, :links, :root_uri
 
   def initialize(pages, links, root_uri)

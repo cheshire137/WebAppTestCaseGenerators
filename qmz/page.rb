@@ -1,6 +1,7 @@
 require 'rubygems'
 require 'uri_extensions.rb'
 require 'open-uri'
+require 'pp'
 require File.join('..', 'html_parsing.rb')
 
 class Page
@@ -24,7 +25,9 @@ class Page
       end
     end
     @uri_parts = @uri.get_uniq_parts()
-    @link_uris = Page.get_link_uris(@uri, html)
+    @link_uris = (Page.get_link_uris(@uri, html) + Page.get_form_uris(@uri, html)).uniq
+    puts "Link URIs:"
+    pp @link_uris
     @link_uri_parts = @link_uris.map { |uri| uri.get_uniq_parts() }
     @links = []
     @is_copy = false

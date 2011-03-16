@@ -114,7 +114,7 @@ if options[:test_paths_file] && !test_paths.empty?
   print "File successfully written\n\n"
 end
 
-dir_name = site.home.uri_parts.join('.').gsub(/\//, '_').chomp('_')
+dir_name = site.home.uri_parts.join('.').gsub(/\//, '_').chomp('_').chomp('.')
 Dir.mkdir(dir_name)
 FileUtils.copy('screen.css', dir_name)
 html_path = dir_name + '/index.html'

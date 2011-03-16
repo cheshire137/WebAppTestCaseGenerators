@@ -1,5 +1,8 @@
 require 'uri'
 
+class URI::Generic
+end
+
 class URI::HTTP
   # Use scheme (e.g. http), host (e.g. google.com), and request_uri,
   # which includes parameters such as ?query=whee but not #comments
