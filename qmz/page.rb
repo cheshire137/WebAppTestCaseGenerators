@@ -50,9 +50,8 @@ class Page
     begin
       stringio = open(uri.to_s)
     rescue OpenURI::HTTPError => err
-      uri_desc = uri.respond_to?(:request_uri) ? uri.request_uri : uri.to_s
       printf("Got error '%s' trying to open URI %s, skipping...\n",
-        err.to_s, uri_desc)
+        err.to_s, uri.to_s)
       stringio = nil
     end
     stringio.nil? || stringio.content_type != 'text/html' ? nil : Nokogiri::HTML(stringio)

@@ -94,7 +94,7 @@ module SharedHtmlParsing
           !input.nil? && SubmitButtonTypes.include?(input['type'].downcase)
         end.collect do |input|
           value = input['value']
-          if value.nil? || value.blank?
+          if value.nil? || value.length < 1
             src = input['src']
             id = input['id']
             src_id = sprintf("source %s, ID %s", src, id)

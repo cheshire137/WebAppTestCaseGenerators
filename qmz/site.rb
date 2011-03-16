@@ -139,7 +139,7 @@ class Site
           # not allowed, etc.) or that aren't HTML pages, so we don't keep
           # trying to open them
           blacklist_uris << uri_desc
-          root_page.delete_link_at(i)
+          root_page.link_texts.delete_at(i)
         else
           existing_uris << uri_desc
           new_page = Page.new(uri, html)

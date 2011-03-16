@@ -9,9 +9,12 @@
       <h1>Test Cases for <%= site_uri %></h1>
     </header>
     <section>
-      <ol>
-        <% test_cases.each do |link_texts| %>
-          <li class="test-case">
+      <dl>
+        <% test_cases.each_with_index do |link_texts, i| %>
+          <dt class="test-case">
+            Test Case #<%= i + 1 %>
+          </dt>
+          <dd>
             <ol>
               <% link_texts.each do |link_text| %>
                 <li>
@@ -22,9 +25,9 @@
                 </li>
               <% end %>
             </ol>
-          </li>
+          </dd>
         <% end %>
-      </ol>
+      </dl>
     </section>
   </body>
 </html>
