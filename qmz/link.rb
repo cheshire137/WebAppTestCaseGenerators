@@ -1,10 +1,10 @@
 require 'uri'
 
 class Link
-  attr_reader :uri1, :uri2
+  attr_reader :uri1, :uri2, :description
   attr_accessor :target_page
 
-  def initialize(uri1, uri2, target_page)
+  def initialize(uri1, uri2, target_page, desc)
     unless uri1.respond_to?(:get_uniq_parts) && uri2.respond_to?(:get_uniq_parts)
       raise ArgumentError, "Given URIs must respond to .get_uniq_parts() method"
     end
@@ -15,9 +15,13 @@ class Link
       raise ArgumentError,
         "Given target page does not have same URI as given uri2"
     end
+    if desc.nil? || !desc.is_a?(String)
+      raise ArgumentError, "Expected String description of link, got #{desc.class.name}"
+    end
     @uri1 = uri1
     @uri2 = uri2
     @target_page = target_page
+    @description = desc
   end
 
   def ==(other)
@@ -34,6 +38,6 @@ class Link
   end
 
   def to_s
-    sprintf("%s => %s", @uri1.request_uri, @uri2.request_uri)
+    sprintf("%s => %s via %s", @uri1.request_uri, @uri2.request_uri, @description)
   end
 end

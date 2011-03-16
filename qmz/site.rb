@@ -41,15 +41,15 @@ class Site
     pages = [@home, @pages].flatten.uniq
     links = []
     pages.each do |page1|
-      page1.link_uris.each_with_index do |uri, i|
+      page1.link_texts.each do |link_text|
         page2 = pages.find do |page|
-          page.uri_parts == page1.link_uri_parts[i]
+          page.uri_parts == link_text.uri_parts
         end
         if page2.nil?
-          printf("ERR: cannot find page with URI %s in site\n", uri.request_uri)
+          printf("ERR: cannot find page with URI %s in site\n", link_text.uri.request_uri)
           next
         end
-        new_link = Link.new(page1.uri, uri, page2)
+        new_link = Link.new(page1.uri, link_text.uri, page2, link_text.description)
         page1.links << new_link
         links << new_link unless links.include? new_link
       end
@@ -119,9 +119,10 @@ class Site
 
       # Don't use #each_with_index because we'll also be using #delete_at, and
       # that does weird stuff to the iterator.
-      (root_page.link_uris.length-1).downto(0) do |i|
-        uri = root_page.link_uris[i]
-        uri_desc = root_page.link_uri_parts[i]
+      (root_page.link_texts.length-1).downto(0) do |i|
+        link_text = root_page.link_texts[i]
+        uri = link_text.uri
+        uri_desc = link_text.uri_parts
         if blacklist_uris.include?(uri_desc)
           # Current URI is already blacklisted, so remove it from this page
           # and skip ahead
@@ -133,17 +134,17 @@ class Site
           next
         end
         html = Page.open_uri(uri)
-        if !html.nil? && html.content_type == 'text/html'
-          existing_uris << uri_desc
-          new_page = Page.new(uri, html)
-          new_pages << new_page
-          pages << new_page
-        else
+        if html.nil?
           # Keep track of URIs that give us errors (404 not found, 405 method
           # not allowed, etc.) or that aren't HTML pages, so we don't keep
           # trying to open them
           blacklist_uris << uri_desc
           root_page.delete_link_at(i)
+        else
+          existing_uris << uri_desc
+          new_page = Page.new(uri, html)
+          new_pages << new_page
+          pages << new_page
         end
       end
       unless new_pages.empty?

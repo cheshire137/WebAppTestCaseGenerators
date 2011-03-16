@@ -47,7 +47,7 @@ class PFD
   end
 
   def get_test_paths
-    preorder(@pages[0], 0, [[]])
+    preorder(@pages[0], 0, [[]], "Start page")
   end
 
   def hash
@@ -77,20 +77,22 @@ class PFD
   end
 
   private
-      def preorder(page, level, test_paths)
+      def preorder(page, level, test_paths, desc_how_got_to_page)
         if test_paths.last.length <= level
           # Based on level, still appending to the last test case
-          test_paths.last << page.uri
+          #test_paths.last << page.uri
+          test_paths.last << LinkText.new(page.uri, desc_how_got_to_page)
         else
           # Have finished concatenating test case, so start a new one based
           # on the test case we just completed
           new_path = test_paths.last.dup[0...level]
-          new_path << page.uri
+          #new_path << page.uri
+          new_path << LinkText.new(page.uri, desc_how_got_to_page)
           test_paths << new_path
         end
         unless page.is_copy
           page.links.each do |link|
-            preorder(link.target_page, level + 1, test_paths)
+            preorder(link.target_page, level + 1, test_paths, link.description)
           end
         end
         test_paths

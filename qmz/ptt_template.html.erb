@@ -10,12 +10,15 @@
     </header>
     <section>
       <ol>
-        <% test_cases.each do |uris| %>
+        <% test_cases.each do |link_texts| %>
           <li class="test-case">
             <ol>
-              <% uris.each do |uri| %>
+              <% link_texts.each do |link_text| %>
                 <li>
-                  <a href="<%= uri %>"><%= uri.request_uri %></a>
+                  <a href="<%= link_text.uri %>">
+                    <%= link_text.uri.request_uri %>
+                  </a>
+                  via <code><%= link_text.description.gsub('<', '&lt;').gsub('>', '&gt;') %></code>
                 </li>
               <% end %>
             </ol>
