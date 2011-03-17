@@ -51,6 +51,7 @@ if options[:uri] && options[:input_file]
   puts optparse
   exit
 elsif options[:uri]
+  puts "Got URI #{options[:uri]}"
   site = Site.new(Page.new(options[:uri]))
 elsif options[:input_file]
   if File.exists? options[:input_file]

@@ -11,7 +11,10 @@ class Page
 
   def initialize(raw_uri, html=nil)
     if raw_uri.is_a? String
-      @uri = URI.parse(raw_uri)
+      @uri = Page.parse_uri_forgivingly(raw_uri)
+      if @uri.nil?
+        raise ArgumentError, "Could not parse given String URI #{raw_uri}"
+      end
     elsif raw_uri.is_a? URI
       @uri = raw_uri
     else

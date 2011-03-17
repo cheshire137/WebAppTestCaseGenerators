@@ -5,21 +5,34 @@ require File.join(File.expand_path(File.dirname(__FILE__)), 'link_text.rb')
 
 module SharedHtmlParsing
   module ClassMethods
+    TransitionURITypes = [URI::HTTP, URI::FTP]
     SubmitButtonTypes = ['submit', 'image'].freeze
 
     def get_uri_for_host(str, host_uri)
-      if str.nil?
-        raise ArgumentError, "Cannot work with nil URI string"
+      unless str.is_a?(String)
+        raise ArgumentError, "Expected URI string, got #{src.class.name}"
       end
-      unless str.is_a? String
-        raise ArgumentError,
-          "Given URI string must be a String, was given a(n) " + str.class.name
+      unless host_uri.is_a?(URI)
+        raise ArgumentError, "Expected host URI, got #{host_uri.class.name}"
       end
-      unless host_uri.is_a? URI
-        raise ArgumentError, "Given host must be a URI, was given a(n) " +
-          host_uri.class.name
+      return nil if str.length < 1
+      rel_uri = parse_uri_forgivingly(str)
+      if rel_uri.nil?
+        if str.include?('#')
+          # Try to clean up badly formed URIs like http://example.com/#comments#add_comment 
+          pound_index = str.index('#')
+          str2 = str[0...pound_index]
+          rel_uri = parse_uri_forgivingly(str2)
+          if rel_uri.nil?
+            puts "Unable to parse '#{str}' or '#{str2}' as a URI--skipping"
+            return nil
+          end
+        else
+          puts "Unable to parse '#{str}' as a URI--skipping"
+          return nil
+        end
       end
-      absolutize_uri(parse_uri_forgivingly(str), host_uri)
+      absolutize_uri(rel_uri, host_uri)
     end
 
     def parse_uri_forgivingly(str)
@@ -47,8 +60,13 @@ module SharedHtmlParsing
             !get_submit_buttons(form.css('input')).empty?
           end
         end.collect do |form|
-          LinkText.new(get_uri_for_host(form['action'], root_uri),
-                       get_submit_buttons(form.css('input')).join(', '))
+          uri = get_uri_for_host(form['action'], root_uri)
+          if include_uri?(uri)
+            desc = get_submit_buttons(form.css('input')).join(', ')
+            LinkText.new(uri, desc)
+          else
+            nil
+          end
         end,
         target_host
       ).uniq
@@ -66,7 +84,12 @@ module SharedHtmlParsing
 	  all_uris = doc.css('a').select do |link|
 		!link['href'].nil?
 	  end.collect do |link|
-        LinkText.new(get_uri_for_host(link['href'], root_uri), link.children.to_s)
+        uri = get_uri_for_host(link['href'], root_uri)
+        if include_uri?(uri)
+          LinkText.new(uri, link.children.to_s)
+        else
+          nil
+        end
 	  end
       extract_uris_on_host(all_uris, target_host).uniq
     end
@@ -110,6 +133,10 @@ module SharedHtmlParsing
           uri = link_text.uri
           target_host == uri.host || uri.relative?
         end.uniq
+      end
+
+      def include_uri?(uri)
+        !uri.nil? && TransitionURITypes.include?(uri.class)
       end
   end
 end

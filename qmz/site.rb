@@ -2,6 +2,7 @@ require 'uri_extensions.rb'
 require 'page.rb'
 require 'link.rb'
 require 'pfd.rb'
+require 'pp'
 
 class Site
   attr_reader :pages, :home
@@ -126,7 +127,7 @@ class Site
         if blacklist_uris.include?(uri_desc)
           # Current URI is already blacklisted, so remove it from this page
           # and skip ahead
-          root_page.delete_link_at(i)
+          root_page.link_texts.delete_at(i)
           next
         elsif existing_uris.include?(uri_desc)
           # Current URI is already represented by a Page, so no need to create
