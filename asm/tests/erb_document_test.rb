@@ -3,6 +3,12 @@ require File.join(base_path, '..', 'parser.rb')
 require File.join(base_path, 'test_helper.rb')
 
 class ERBDocumentTest < Test::Unit::TestCase
+  def test_close_branch_component_expression
+    assert_component_expression(fixture('_add_updates.html'),
+                                '_add_updates.html.erb',
+                                '(NULL|((p1|p2)))')
+  end
+
   def test_lvar_component_expression
     # Sometimes the sexp for ERB code can differ based on context, like if
     # "thing.blah()" is parsed versus "if thing = junk; thing.blah(); end"

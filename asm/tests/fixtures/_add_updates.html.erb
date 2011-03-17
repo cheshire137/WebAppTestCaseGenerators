@@ -1,0 +1,12 @@
+<% if outer_if %>
+  <% form_for(@recent_update, :remote => true) do |f| %>
+  <% end %>
+<% else %>
+  <% remote_form_for(@recent_update) do |f| %>
+    <% if inner_if %>
+      <%= f.submit('Add Update', :disable_with => 'Updating...' ) %>
+    <% else %>
+      <%= f.submit('Add Update', :id => 'submit_button', :onclick => 'return false;') %>
+    <% end %>
+  <% end %>
+<% end %>

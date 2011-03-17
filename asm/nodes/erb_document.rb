@@ -342,7 +342,8 @@ module ERBGrammar
 
       def get_atomic_sections_recursive(nodes=[])
         sections = []
-        nodes.each do |node|
+        get_node_sections = lambda do |node|
+          next if node.nil?
           sections << node if node.is_a?(AtomicSection)
           if node.respond_to?(:content) && !node.content.nil?
             sections += get_atomic_sections_recursive(node.content)
@@ -351,6 +352,10 @@ module ERBGrammar
             sections += node.atomic_sections
           end
         end
+        nodes.each(&get_node_sections)
+        nodes.select do |node|
+          node.respond_to?(:close) && !node.close.nil?
+        end.map(&:close).each(&get_node_sections)
         sections
       end
 
@@ -364,6 +369,7 @@ module ERBGrammar
         after_chunk = cur_code[replace_index_end+1...cur_code.length]
         [before_chunk, after_chunk]
       end
+      
       def get_transitions_recursive(nodes=[])
         trans = []
         nodes.each do |node|
@@ -508,6 +514,9 @@ module ERBGrammar
         opening_tag_has_close = opening.respond_to?(:close)
         if opening_tag_has_close
           opening.close = unit_elements.last
+          if opening.close.respond_to?(:parent=)
+            opening.close.parent = opening
+          end
         end
         included_content = content.select do |el|
           el.index > opening.index && (!opening_tag_has_close || el.index < opening.close.index)

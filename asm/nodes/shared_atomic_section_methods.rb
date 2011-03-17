@@ -160,7 +160,6 @@ module ERBGrammar
     end
 
     private
-
       def selection_component_expression(seen_children=[])
         if !respond_to?(:true_content) || !respond_to?(:false_content)
           # End up here when, for example, there's an if statement within an ERBOutputTag,
@@ -209,6 +208,8 @@ module ERBGrammar
         #puts "True branch: " + true_branch
         #puts "False branch: " + false_branch
         #puts "--------------"
+        true_branch = 'NULL' if true_branch.blank?
+        false_branch = 'NULL' if false_branch.blank?
         if (true_branch.blank? || 'NULL' == true_branch) && (false_branch.blank? || 'NULL' == false_branch)
           nil
         else

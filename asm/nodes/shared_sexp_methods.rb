@@ -277,12 +277,6 @@ module SharedSexpMethods
           if condition_pivot.content.nil? || condition_pivot.content.empty?
             included_content = false_erb
 
-            included_content.each do |child|
-              if child.respond_to?(:parent=)
-                child.parent = condition_pivot
-              end
-            end
-
             # TODO: do I need to check that all elements in the included
             # content have an index > condition_pivot.index and <
             # condition_pivot.close?
@@ -306,7 +300,15 @@ module SharedSexpMethods
           # Wipe out the content that had contained the stuff that is now the
           # content of the conditional's pivot element (e.g., the else), so we
           # don't have repeated content/sections elsewhere.
-          delete_children_in_range(pivot_index, condition_pivot.close.index)
+          start_del_range = pivot_index
+          end_del_range = condition_pivot.close.index
+          delete_children_in_range(start_del_range, end_del_range)
+          
+          if @close.respond_to?(:split_branches)
+            # In case the else block has its own nested ifs with atomic sections,
+            # need to split those out, too
+            @close.split_branches()
+          end
         end
       end
     else

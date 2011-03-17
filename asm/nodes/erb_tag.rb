@@ -28,7 +28,7 @@ module ERBGrammar
       trans += get_redirect_transitions(source)
       trans
     end
-
+    
     def inspect
       sprintf("%s (%d): %s\n%s", self.class, @index, ruby_code, content_str())
     end

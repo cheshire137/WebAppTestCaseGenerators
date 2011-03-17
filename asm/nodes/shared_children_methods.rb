@@ -1,6 +1,6 @@
 module SharedChildrenMethods
   def delete_children_in_range(start_index, end_index)
-    #puts "---Deleting children between #{start_index}..#{end_index} from #{self.class.name}"
+    #puts "---Deleting children between #{start_index}..#{end_index} from #{self.class.name} ##{@index}"
     #puts "There are #{@content.length} children"
     #puts "FROM PARENT #{to_s}"
     if respond_to?(:atomic_sections) && !self.atomic_sections.nil?
@@ -13,7 +13,7 @@ module SharedChildrenMethods
         end
       end
     end
-    @content.delete_if do |el|
+    (@content || []).delete_if do |el|
       if el.index >= start_index && el.index <= end_index
         #puts "Deleting element #{el}"
         true
