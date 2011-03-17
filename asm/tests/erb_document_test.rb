@@ -11,6 +11,12 @@ class ERBDocumentTest < Test::Unit::TestCase
                                 'short_edit.html.erb',
                                 '(p1|p2)')
   end
+  
+  def test_loops_component_expression
+    assert_component_expression(fixture('loops.html'),
+                                'loops.html.erb',
+                                'p1*.p2*.p3*.p4***')
+  end
 
   def test_form_tag_component_expression
     assert_component_expression(fixture('login_index.html'),

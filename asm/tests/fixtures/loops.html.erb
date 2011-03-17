@@ -1,0 +1,16 @@
+<% 3.downto(1) do %>
+  This is a loop
+<% end %>
+<% 1.upto(12) do %>
+  This is another loop
+<% end %>
+<% for i in 1..8 do %>
+  Yet another loop
+<% end %>
+<% 3.times do |i| %>
+  <% for j in 3..5 do %>
+    <% arr.each do |item| %>
+	  Three times nested loop
+	<% end %>
+  <% end %>
+<% end %>

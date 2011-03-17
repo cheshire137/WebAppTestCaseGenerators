@@ -2,7 +2,7 @@ require 'pp'
 
 module SharedSexpMethods
   ITERATION_METHODS = [:each, :each_with_index, :each_cons, :each_entry,
-    :each_slice, :each_with_object].freeze
+    :each_slice, :each_with_object, :upto, :downto, :times].freeze
   URL_METHODS = [:url_for].freeze
   attr_accessor :sexp
 
