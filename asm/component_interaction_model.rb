@@ -25,12 +25,12 @@ class ComponentInteractionModel
   end
 
   def controller
-    prefix = File.join(File.join('app', 'views'), '')
-    prefix_start = @start_page.index(prefix)
-    return 'UNKNOWN' if prefix_start.nil?
-    suffix_start = prefix_start + prefix.length
-    suffix = @start_page[suffix_start...@start_page.length]
-    File.dirname(suffix)
+    rails_uri = RailsURL.from_path(@start_page, @site_root)
+    if rails_uri.nil?
+      'UNKNOWN'
+    else
+      rails_uri.controller || 'UNKNOWN'
+    end
   end
 
   def start_url

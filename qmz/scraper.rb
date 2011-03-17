@@ -4,6 +4,8 @@ require 'optparse'
 require 'pfd.rb'
 require 'page.rb'
 require 'site.rb'
+require 'yaml'
+require 'fileutils'
 
 options = {}
 optparse = OptionParser.new do |opts|

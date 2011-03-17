@@ -1,4 +1,6 @@
 require File.join('..', 'html_parsing.rb')
+require 'rubygems'
+require 'nokogiri'
 
 module ERBGrammar
   class HTMLOpenTag < Treetop::Runtime::SyntaxNode
@@ -32,10 +34,11 @@ module ERBGrammar
 	  else
 		source_uri = source
 	  end
-	  HTMLOpenTag.get_link_uris(source_uri, text_value).each do |sink|
+    doc = Nokogiri::HTML(text_value)
+	  HTMLOpenTag.get_link_uris(source_uri, doc).each do |sink|
 		trans << LinkTransition.new(source, RailsURL.from_uri(sink), text_value)
 	  end
-	  HTMLOpenTag.get_form_uris(source_uri, text_value).each do |sink|
+	  HTMLOpenTag.get_form_uris(source_uri, doc).each do |sink|
         trans << FormTransition.new(source, RailsURL.from_uri(sink), text_value)
 	  end
       trans

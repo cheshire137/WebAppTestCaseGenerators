@@ -10,10 +10,13 @@ class RailsURL
     @controller = (ctrlr || '').strip.downcase
     @action = (act || '').strip.downcase
     @raw_url = (raw || '').strip.downcase
-    @site_root = root.strip.downcase
+    @site_root = root.to_s.strip.downcase
   end
 
   def RailsURL.from_path(path, site_root='')
+  return nil if path.nil?
+  path_parts = path.split(File::ALT_SEPARATOR)
+  path = File.join(path_parts)
 	controller_prefix = File.join('app', 'views')
 	prefix_start = path.index(controller_prefix)
 	return nil if prefix_start.nil?

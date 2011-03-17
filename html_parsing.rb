@@ -24,11 +24,9 @@ module SharedHtmlParsing
           str2 = str[0...pound_index]
           rel_uri = parse_uri_forgivingly(str2)
           if rel_uri.nil?
-            puts "Unable to parse '#{str}' or '#{str2}' as a URI--skipping"
             return nil
           end
         else
-          puts "Unable to parse '#{str}' as a URI--skipping"
           return nil
         end
       end
