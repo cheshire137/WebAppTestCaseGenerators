@@ -175,16 +175,19 @@ module SharedSexpMethods
   end
 
   def selection_false_case?(exp_false_sexp)
-    false_case = @sexp[3]
+    case @sexp[0]
+    when :case
+      false_case = @sexp[3...@sexp.length]
+    else
+      false_case = @sexp[3]
+    end
     sexp_contains_sexp?(exp_false_sexp, false_case)
   end
 
   # p -> p1 | p2 (conditionals)
   def selection?
     set_sexp() if @sexp.nil?
-    if :invalid_ruby == @sexp
-      return false
-    end
+    return false if :invalid_ruby == @sexp
     [:if, :case, :when].each do |keyword|
       return true if self.class.sexp_outer_keyword?(@sexp, keyword)
     end
@@ -211,9 +214,10 @@ module SharedSexpMethods
   end
 
   def split_branch
-    atomic_sections = @atomic_sections || []
-    #puts "\nAtomic sections:"
-    #pp atomic_sections
+    # Return here when, for example, there's an if statement within an ERBOutputTag,
+    # e.g., <%= (user.id == session[:user][:id]) ? 'you' : user.email %>
+    return unless respond_to?(:branch_content=)
+    return if :invalid_ruby == @sexp
     # Expect non-ERBTag content to be contained in AtomicSections, so
     # only get ERBTags who might have nested AtomicSections within them,
     # as opposed to HTMLOpenTags and whatnot that would be duplicated
@@ -224,6 +228,71 @@ module SharedSexpMethods
     end
     #puts "\nAll ERB content:"
     #pp erb_content
+    case @sexp[0]
+    when :case
+      split_case_branch(erb_content)
+    else
+      split_if_else_branch(erb_content)
+    end
+  end
+  
+  def split_case_branch(erb_content)
+    # Split branches on contents first, in case there are nested case-whens
+    erb_content.map(&:split_branch)
+    @branch_content ||= []
+    return if @close.nil?
+    
+    atomic_sections = @atomic_sections || []
+    # Find all invalid Ruby, and assume it's the pivot points
+    pivots = erb_content.select do |child|
+      :invalid_ruby == child.sexp
+    end.sort { |a, b| a.index <=> b.index }
+    return if pivots.empty? || pivots.length < 2
+    
+    prev_pivot = pivots[0]
+    prev_index = prev_pivot.index
+    (pivots[1...pivots.length] + [@close]).each do |condition_pivot|
+      cond_pivot_index = condition_pivot.index
+      is_branch_child = lambda do |child|
+        child.index > prev_index && child.index < cond_pivot_index
+      end
+      branch_erb = erb_content.select(&is_branch_child)
+      branch_sections = atomic_sections.select(&is_branch_child)
+      branch_content = branch_erb + branch_sections
+      if branch_content.empty?
+        #puts "No content in branch with condition pivot #{condition_pivot}"
+        next
+      end
+      branch_content.sort! { |a, b| self.class.section_and_node_sort(a, b) }
+      copy_atomic_sections(branch_sections, prev_pivot)
+      copy_content(branch_erb, prev_pivot)
+      delete_children_in_range(branch_content.first.index, branch_content.last.index)
+      @branch_content << [condition_pivot]
+      
+      prev_pivot = condition_pivot
+      prev_index = prev_pivot.index
+    end
+  end
+  
+  def copy_atomic_sections(sections, parent)
+    sections.each do |section|
+      parent.add_atomic_section(section)
+    end
+  end
+  
+  def copy_content(new_content, parent)
+    if parent.content.nil? || parent.content.empty?
+      # TODO: do I need to check that all elements in the included
+      # content have an index > parent.index and <
+      # parent.close?
+      parent.content = new_content
+    else
+      raise "Cannot set content of #{parent}, it is already set"
+    end
+  end
+  
+  def split_if_else_branch(erb_content)
+    atomic_sections = @atomic_sections || []
     true_erb = erb_content.select do |child|
       selection_true_case?(child.sexp)
     end
@@ -232,88 +301,69 @@ module SharedSexpMethods
       selection_true_case?(section.sexp)
     end
     true_content = true_erb + true_sections
-    #false_erb = erb_content - true_erb
-    #false_sections = atomic_sections - true_sections
     false_erb = erb_content.select do |child|
       selection_false_case?(child.sexp)
     end
     false_sections = atomic_sections.select do |section|
       selection_false_case?(section.sexp)
     end
+    sort_and_set_true_false_content(true_content, false_erb, false_sections)
+  end
+  
+  def sort_and_set_true_false_content(true_content, false_erb, false_sections)
     false_content = false_erb + false_sections
-    #puts "\nTrue content:"
-    #pp true_content
-    #puts "\nFalse content:"
-    #pp false_content
-    #puts "\n------------------------"
-    if respond_to?(:true_content=) && respond_to?(:false_content=)
-      true_content.sort! { |a, b| self.class.section_and_node_sort(a, b) }
-      false_content.sort! { |a, b| self.class.section_and_node_sort(a, b) }
-      self.true_content = true_content
-      self.false_content = false_content
-      last_true_index = first_false_index = -1
-      unless true_content.nil? || true_content.empty?
-        last_true = true_content.last
-        last_true_index = last_true.index
-        if last_true.respond_to?(:range) && !last_true.range.nil?
-          last_true_index = last_true.range.to_a.last
-        end
-        #puts "Last index in true content: " + last_true_index.to_s
+    true_content.sort! { |a, b| self.class.section_and_node_sort(a, b) }
+    false_content.sort! { |a, b| self.class.section_and_node_sort(a, b) }
+    self.branch_content ||= []
+    self.branch_content << true_content
+    self.branch_content << false_content
+    last_true_index = first_false_index = -1
+    unless true_content.nil? || true_content.empty?
+      last_true = true_content.last
+      last_true_index = last_true.index
+      if last_true.respond_to?(:range) && !last_true.range.nil?
+        last_true_index = last_true.range.to_a.last
       end
-      unless false_content.nil? || false_content.empty?
-        first_false_index = false_content.first.index
-        #puts "First index in false content: " + first_false_index.to_s
-      end
-      #puts ''
-      if 2 == (first_false_index - last_true_index)
-        pivot_index = last_true_index + 1
-        condition_pivot = @content.find do |child|
-          child.respond_to?(:content=) && pivot_index == child.index
-        end
-        unless condition_pivot.nil?
-          # Move if's close to be the close of this else
-          condition_pivot.close = @close
+      #puts "Last index in true content: " + last_true_index.to_s
+    end
+    unless false_content.nil? || false_content.empty?
+      first_false_index = false_content.first.index
+      #puts "First index in false content: " + first_false_index.to_s
+    end
+    if 2 == (first_false_index - last_true_index)
+      pivot_if_else(last_true_index, false_erb, false_sections)
+    end
+  end
+  
+  def pivot_if_else(last_true_index, false_erb, false_sections)
+    pivot_index = last_true_index + 1
+    condition_pivot = @content.find do |child|
+      child.respond_to?(:content=) && pivot_index == child.index
+    end
+    unless condition_pivot.nil?
+      # Move if's close to be the close of this else
+      condition_pivot.close = @close
 
-          if condition_pivot.content.nil? || condition_pivot.content.empty?
-            included_content = false_erb
+      copy_content(false_erb, condition_pivot)
+      copy_atomic_sections(false_sections, condition_pivot)
+      
+      # Set the if's close to now be this else
+      condition_pivot.parent = self
+      @close = condition_pivot
 
-            # TODO: do I need to check that all elements in the included
-            # content have an index > condition_pivot.index and <
-            # condition_pivot.close?
-            condition_pivot.content = included_content
-          else
-            raise "Cannot set content of #{condition_pivot}, it is already set"
-          end
-
-          if condition_pivot.atomic_sections.nil? || condition_pivot.atomic_sections.empty?
-            false_sections.each do |section|
-              condition_pivot.add_atomic_section(section)
-            end
-          else
-            raise "Cannot set atomic sections of #{condition_pivot}, they are already set"
-          end
-
-          # Set the if's close to now be this else
-          condition_pivot.parent = self
-          @close = condition_pivot
-
-          # Wipe out the content that had contained the stuff that is now the
-          # content of the conditional's pivot element (e.g., the else), so we
-          # don't have repeated content/sections elsewhere.
-          start_del_range = pivot_index
-          end_del_range = condition_pivot.close.index
-          delete_children_in_range(start_del_range, end_del_range)
-          
-          if @close.respond_to?(:split_branches)
-            # In case the else block has its own nested ifs with atomic sections,
-            # need to split those out, too
-            @close.split_branches()
-          end
-        end
-      end
-    else
-      # End up here when, for example, there's an if statement within an ERBOutputTag,
-      # e.g., <%= (user.id == session[:user][:id]) ? 'you' : user.email %>
+      #if @close.respond_to?(:split_branches)
+        # In case the else block has its own nested ifs with atomic sections,
+        # need to split those out, too
+        #@close.split_branches()
+      #end
+      
+      # Wipe out the content that had contained the stuff that is now the
+      # content of the conditional's pivot element (e.g., the else), so we
+      # don't have repeated content/sections elsewhere.
+      start_del_range = pivot_index
+      end_del_range = condition_pivot.close.index
+      #puts "Deleting children in range #{start_del_range}-#{end_del_range}"
+      delete_children_in_range(start_del_range, end_del_range)
     end
   end
 
@@ -390,14 +440,14 @@ module SharedSexpMethods
     end
 
     def contained_or_equal?(needle, haystack)
-      #puts "Looking for "
-      #pp needle
-      #puts "\nIn:"
-      #pp haystack
-      #puts "\n\n"
-      if !haystack.nil? && (haystack.include?(needle) || haystack == needle)
-        #puts "Found it!"
+      return false if haystack.nil? || !haystack.is_a?(Sexp)
+      if haystack.include?(needle) || haystack == needle
         return true
+      end
+      haystack.each do |haystack_child|
+        if contained_or_equal?(needle, haystack_child)
+          return true
+        end
       end
       false
     end
@@ -440,6 +490,11 @@ module SharedSexpMethods
         puts "Not a selection"
         return false
       end
+      #puts "Looking for"
+      #pp needle
+      #puts "In"
+      #pp haystack
+      #puts ''
       return true if contained_or_equal?(needle, haystack)
       #if self.class.sexp_outer_keyword?(haystack, :block)
       #  haystack = haystack[1...haystack.length]

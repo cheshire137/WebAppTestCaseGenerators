@@ -6,7 +6,7 @@ class ERBDocumentTest < Test::Unit::TestCase
   def test_close_branch_component_expression
     assert_component_expression(fixture('_add_updates.html'),
                                 '_add_updates.html.erb',
-                                '(NULL|((p1|p2)))')
+                                '((p1|p2)|NULL)')
   end
 
   def test_lvar_component_expression
@@ -51,7 +51,7 @@ class ERBDocumentTest < Test::Unit::TestCase
   def test_multiple_erb_lines_unequal_ifs_component_expression
     assert_component_expression(fixture('_in_progress.html'),
                                 '_in_progress.html.erb',
-                                '(NULL|(((p1|NULL).p2)|p3)).p4.p5.p6*.p7.p8*.p9.p10.p11.p12.(p13|p14)')
+                                '((((p1|NULL).p2)|p3)|NULL).p4.p5.p6*.p7.p8*.p9.p10.p11.p12.(p13|p14)')
   end
 
   def test_nested_unequal_ifs_component_expression
@@ -69,7 +69,7 @@ class ERBDocumentTest < Test::Unit::TestCase
   def test_nested_aggregation_selection_component_expression
     assert_component_expression(fixture('game_index1.html'),
                                 'game_index1.html.erb',
-                                '(NULL|(p1.(p2|(p3.p4*.p5))*.p6))')
+                                '((p1.(p2|(p3.p4*.p5))*.p6)|NULL)')
   end
 
   def test_nested_if_and_aggregation_component_expression
@@ -81,7 +81,7 @@ class ERBDocumentTest < Test::Unit::TestCase
   def test_nested_if_and_loop_component_expression
     assert_component_expression(fixture('_finished.html'),
                                 '_finished.html.erb',
-                                '((p1|p2)|NULL).(NULL|p3).(NULL|p4).p5.p6*.p7')
+                                '((p1|p2)|NULL).(p3|NULL).(p4|NULL).p5.p6*.p7')
   end
 
   def test_delete_node
@@ -122,8 +122,8 @@ class ERBDocumentTest < Test::Unit::TestCase
       child.is_a?(AtomicSection)
     end
     assert_equal 1, sections.length, "Expected one atomic section child of if-winner-equal ERBTag: " + sections.inspect
-    assert_not_nil if_winner_equal.true_content, "Expected non-nil true_content for if-winner-equal ERBTag"
-    assert_not_nil if_winner_equal.false_content, "Expected non-nil false_content for if-winner-equal ERBTag"
+    assert_not_nil if_winner_equal.branch_content, "Expected non-nil branch_content for if-winner-equal ERBTag"
+    assert_not_equal 1, if_winner_equal.branch_content.length
     else_tag = if_winner_equal.close
     assert_not_nil else_tag, "Expected 'else' to be close of: " + if_winner_equal.to_s
     assert_equal "else", else_tag.ruby_code()

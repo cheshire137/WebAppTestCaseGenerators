@@ -10,7 +10,7 @@ module ERBGrammar
     include SharedOpenTagMethods
     FORM_METHODS = [:form_tag, :form_remote_tag].freeze
     REDIRECT_METHODS = [:redirect_to, :redirect_to_full_url].freeze
-    attr_accessor :content, :parent, :close, :true_content, :false_content, :overridden_ruby_code
+    attr_accessor :content, :parent, :close, :branch_content, :overridden_ruby_code
 
     def atomic_section_str(indent_level=0)
       if @atomic_sections.nil?
@@ -44,6 +44,7 @@ module ERBGrammar
     def to_s(indent_level=0)
       sections = get_sections_and_nodes(:to_s, indent_level+2)
       prefix = '  '
+      #branch_str = @branch_content.nil? ? '' : sprintf("\nBranches:\n%s", @branch_content.map(&:inspect).join(",\n"))
       content_prefix = sections.empty? ? '' : sprintf("%sContent and sections:\n", prefix * (indent_level+1))
       close_string = close_str(indent_level+2)
       close_prefix = close_string.blank? ? '' : sprintf("%sClose:\n", prefix * (indent_level+1))

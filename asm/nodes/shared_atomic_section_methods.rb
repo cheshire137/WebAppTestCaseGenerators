@@ -148,75 +148,64 @@ module ERBGrammar
     end
 
     def split_branches
-      branch_processor = lambda do |child|
-        if child.respond_to?(:split_branch) && child.respond_to?(:selection?) && child.selection?
-          child.split_branch()
-        end
-      end
       # TODO: should I split innermost branches first, to get nested if's?
       # Thus should I do branch_processor on @content before self?
-      branch_processor.call(self)
-      @content.each(&branch_processor)
+      if respond_to?(:split_branch) && respond_to?(:selection?) && selection?
+        split_branch()
+      end
+      (@content || []).select do |child|
+        !child.nil? && child.respond_to?(:split_branches)
+      end.each do |child|
+        child.split_branches()
+      end
+      if !@close.nil? && @close.respond_to?(:split_branches)
+        @close.split_branches()
+      end
     end
 
     private
       def selection_component_expression(seen_children=[])
-        if !respond_to?(:true_content) || !respond_to?(:false_content)
+        if !respond_to?(:branch_content)
           # End up here when, for example, there's an if statement within an ERBOutputTag,
           # e.g., <%= (user.id == session[:user][:id]) ? 'you' : user.email %>
           return nil
         end
-        if @true_content.nil? || @false_content.nil?
-          return "Has split branch, but no @true_content or no @false_content is set"
+        if @branch_content.nil?
+          return "Has split branch, but no @branch_content is set"
         end
-        #puts "Selection with " + self.class.name
-        #pp self
-        #puts "\nTrue content:"
-        #pp @true_content
-        #puts "\nFalse content:"
-        #pp @false_content
-        #puts "--------------"
-        num_true = @true_content.length
-        num_false = @false_content.length
-        is_true_single = num_true <= 1
-        is_false_single = num_false <= 1
-        opening_true_paren = is_true_single ? '' : '('
-        closing_true_paren = is_true_single ? '' : ')'
-        opening_false_paren = is_false_single ? '' : '('
-        closing_false_paren = is_false_single ? '' : ')'
         child_selector = lambda do |n|
-                            if seen_children.include?(n)
+                            if seen_children.include?(n) || !n.respond_to?(:component_expression)
                               nil
                             else
                               seen_children << n
                               n.component_expression(seen_children)
                             end
                           end
-        true_branch = case num_true
-                        when 0
-                          'NULL'
-                        else
-                          @true_content.map(&child_selector).compact.join('.')
-                      end
-        false_branch = case num_false
-                         when 0
-                           'NULL'
-                         else
-                           @false_content.map(&child_selector).compact.join('.')
-                       end
-        #puts "From #{to_s}"
-        #puts "True branch: " + true_branch
-        #puts "False branch: " + false_branch
-        #puts "--------------"
-        true_branch = 'NULL' if true_branch.blank?
-        false_branch = 'NULL' if false_branch.blank?
-        if (true_branch.blank? || 'NULL' == true_branch) && (false_branch.blank? || 'NULL' == false_branch)
-          nil
-        else
-          sprintf("(%s%s%s|%s%s%s)", opening_true_paren, true_branch,
-                  closing_true_paren, opening_false_paren, false_branch,
-                  closing_false_paren)
+        branches_exprs = @branch_content.collect do |cur_branch_content|
+          if cur_branch_content.nil? || cur_branch_content.empty?
+            nil
+          else
+            cur_branch_exprs = cur_branch_content.map(&child_selector).compact.select do |expr|
+              !expr.blank?
+            end
+            if cur_branch_exprs.empty?
+              nil
+            else
+              cur_branch_str = cur_branch_exprs.join('.')
+              one_child = cur_branch_exprs.length == 1
+              open_paren = one_child ? '' : '('
+              close_paren = one_child ? '' : ')'
+              sprintf("%s%s%s", open_paren, cur_branch_str, close_paren)
+            end
+          end
+        end.compact
+        return nil if branches_exprs.empty?
+        if branches_exprs.length == 1
+          branches_exprs << 'NULL'
         end
+        branches_str = branches_exprs.join('|')
+        branches_str = 'NULL' if branches_str.blank?
+        sprintf("(%s)", branches_str)
       end
 
       def nodes_to_atomic_section_content(sections)

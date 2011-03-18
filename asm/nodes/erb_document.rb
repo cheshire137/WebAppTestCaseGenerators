@@ -166,6 +166,7 @@ module ERBGrammar
         end
       end
     end
+    
     def save_atomic_sections(base_dir='.')
       all_sections = get_atomic_sections()
       if all_sections.nil? || all_sections.empty?
