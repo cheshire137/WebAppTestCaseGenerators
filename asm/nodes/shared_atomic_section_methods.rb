@@ -23,6 +23,9 @@ module ERBGrammar
     def add_atomic_section(section)
       return if section.nil?
       section_index = section.index
+      if section_index <= @index
+        raise ArgumentError, "Cannot set section #{section} to be child of #{self}--index is too low"
+      end
       if @atomic_sections.nil? || @atomic_sections.empty?
         @atomic_sections = [section]
       else

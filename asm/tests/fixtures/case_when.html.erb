@@ -1,0 +1,11 @@
+<% case var %>
+<% when 1..3 %>
+  Some output
+<% when 4..6 %>
+  Second bit of output
+<% when 7..9 %>
+  <%= getValue() %>
+  <strong>HTML stuff</strong>
+<% else %>
+  Default case
+<% end %>

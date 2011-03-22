@@ -226,52 +226,85 @@ module SharedSexpMethods
       child.set_sexp() if child.sexp.nil?
       child.is_a?(ERBGrammar::ERBTag)
     end
-    #puts "\nAll ERB content:"
-    #pp erb_content
-    case @sexp[0]
-    when :case
-      split_case_branch(erb_content)
-    else
-      split_if_else_branch(erb_content)
-    end
-  end
-  
-  def split_case_branch(erb_content)
     # Split branches on contents first, in case there are nested case-whens
     erb_content.map(&:split_branch)
+    #puts "\nAll ERB content in ##{@index}:"
+    #pp erb_content
     @branch_content ||= []
-    return if @close.nil?
     
     atomic_sections = @atomic_sections || []
+
+    if erb_content.empty?
+      @branch_content << atomic_sections
+      return
+    end
+
     # Find all invalid Ruby, and assume it's the pivot points
     pivots = erb_content.select do |child|
       :invalid_ruby == child.sexp
     end.sort { |a, b| a.index <=> b.index }
-    return if pivots.empty? || pivots.length < 2
-    
+    #puts "Pivots in ##{self.index}:"
+    #pp pivots
+    return if pivots.empty?
     prev_pivot = pivots[0]
     prev_index = prev_pivot.index
-    (pivots[1...pivots.length] + [@close]).each do |condition_pivot|
+
+    select_first_branch = lambda do |child|
+      child.index > @index && child.index < prev_index
+    end
+    branch_content = erb_content.select(&select_first_branch) +
+      atomic_sections.select(&select_first_branch)
+    unless branch_content.empty?
+      branch_content.sort! { |a, b| self.class.section_and_node_sort(a, b) }
+      @branch_content << branch_content
+    end
+    
+    if :invalid_ruby == pivots[0].sexp
+      prev_pivot = pivots[0]
+    else
+      prev_pivot = self
+    end
+    prev_index = prev_pivot.index
+    pivots.each do |condition_pivot|
+      next if prev_pivot == condition_pivot
       cond_pivot_index = condition_pivot.index
+      #puts "Looking at #{prev_pivot} through #{condition_pivot}"
       is_branch_child = lambda do |child|
         child.index > prev_index && child.index < cond_pivot_index
       end
       branch_erb = erb_content.select(&is_branch_child)
       branch_sections = atomic_sections.select(&is_branch_child)
       branch_content = branch_erb + branch_sections
-      if branch_content.empty?
-        #puts "No content in branch with condition pivot #{condition_pivot}"
-        next
-      end
+      next if branch_content.empty?
       branch_content.sort! { |a, b| self.class.section_and_node_sort(a, b) }
-      copy_atomic_sections(branch_sections, prev_pivot)
-      copy_content(branch_erb, prev_pivot)
-      delete_children_in_range(branch_content.first.index, branch_content.last.index)
-      @branch_content << [condition_pivot]
+      if prev_pivot != self
+        copy_atomic_sections(branch_sections, prev_pivot)
+        copy_content(branch_erb, prev_pivot) unless branch_erb.empty?
+        delete_children_in_range(branch_content.first.index, cond_pivot_index-1)
+        @branch_content << [prev_pivot]
+      end
       
       prev_pivot = condition_pivot
       prev_index = prev_pivot.index
     end
+
+    unless @close.nil?
+      #puts "Last index ##{prev_index}, Close ##{@close.index}"
+      select_last_branch = lambda do |child|
+        child.index > prev_index && child.index < @close.index
+      end
+      branch_sections = atomic_sections.select(&select_last_branch)
+      branch_erb = erb_content.select(&select_last_branch)
+      copy_atomic_sections(branch_sections, prev_pivot)
+      copy_content(branch_erb, prev_pivot) unless branch_erb.empty?
+      branch_content = branch_erb + branch_sections
+      return if branch_content.empty?
+      branch_content.sort! { |a, b| self.class.section_and_node_sort(a, b) }
+      delete_children_in_range(branch_content.first.index, @close.index-1)
+      @branch_content << branch_content
+    end
+    #puts "Branch content:"
+    #pp @branch_content
   end
   
   def copy_atomic_sections(sections, parent)
@@ -281,14 +314,13 @@ module SharedSexpMethods
   end
   
   def copy_content(new_content, parent)
-    if parent.content.nil? || parent.content.empty?
-      # TODO: do I need to check that all elements in the included
-      # content have an index > parent.index and <
-      # parent.close?
-      parent.content = new_content
-    else
-      raise "Cannot set content of #{parent}, it is already set"
+    return if parent.nil?
+    (new_content || []).each do |child|
+      if child.index <= parent.index
+        raise ArgumentError, "Cannot set element #{child} to be child of #{parent}--index is too low"
+      end
     end
+    parent.content = new_content
   end
   
   def split_if_else_branch(erb_content)

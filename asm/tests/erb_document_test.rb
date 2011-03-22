@@ -3,6 +3,30 @@ require File.join(base_path, '..', 'parser.rb')
 require File.join(base_path, 'test_helper.rb')
 
 class ERBDocumentTest < Test::Unit::TestCase
+  def test_elsif_component_expression
+    assert_component_expression(fixture('elsif.html'),
+                                'elsif.html.erb',
+                                '(p1|p2|p3|p4)')
+  end
+
+  def test_loop_if_loop_component_expression
+    assert_component_expression(fixture('game_index1-sans_unless.html'),
+                                'game_index1-sans_unless.html.erb',
+                                'p1.(p2|(p3.p4*.p5))*.p6')
+  end
+
+  def test_case_when_component_expression
+    assert_component_expression(fixture('case_when.html'),
+                                'case_when.html.erb',
+                                '(p1|p2|p3|p4)')
+  end
+  
+  def test_nested_elsif_component_expression
+    assert_component_expression(fixture('nested_elsif.html'),
+                                'nested_elsif.html.erb',
+                                '((p1|p2)|p3|p4)')
+  end
+
   def test_close_branch_component_expression
     assert_component_expression(fixture('_add_updates.html'),
                                 '_add_updates.html.erb',
@@ -124,13 +148,9 @@ class ERBDocumentTest < Test::Unit::TestCase
     assert_equal 1, sections.length, "Expected one atomic section child of if-winner-equal ERBTag: " + sections.inspect
     assert_not_nil if_winner_equal.branch_content, "Expected non-nil branch_content for if-winner-equal ERBTag"
     assert_not_equal 1, if_winner_equal.branch_content.length
-    else_tag = if_winner_equal.close
-    assert_not_nil else_tag, "Expected 'else' to be close of: " + if_winner_equal.to_s
-    assert_equal "else", else_tag.ruby_code()
-    else_sections = else_tag.get_sections_and_nodes().select do |child|
-      child.is_a?(AtomicSection)
-    end
-    assert_equal 1, else_sections.length, "Expected one atomic section child of else tag: " + else_sections.inspect
+    end_tag = if_winner_equal.close
+    assert_not_nil end_tag, "Expected 'end' to be close of: " + if_winner_equal.to_s
+    assert_equal "end", end_tag.ruby_code()
   end
 
   def test_square_bracket_accessor_fixnum

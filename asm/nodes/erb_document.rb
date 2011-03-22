@@ -513,10 +513,14 @@ module ERBGrammar
           return
         end
         opening_tag_has_close = opening.respond_to?(:close)
+        opening_tag_has_parent = opening.respond_to?(:parent) && !opening.parent.nil?
         if opening_tag_has_close
           opening.close = unit_elements.last
           if opening.close.respond_to?(:parent=)
             opening.close.parent = opening
+          end
+          if opening_tag_has_parent
+            opening.parent.delete_children_in_range(opening.close.index, opening.close.index)
           end
         end
         included_content = content.select do |el|
