@@ -192,15 +192,10 @@ module SharedSexpMethods
       child.is_a?(ERBGrammar::ERBTag) && child.respond_to?(:parent) && self == child.parent
     end
     # Split branches on contents first, in case there are nested case-whens
-    erb_content.each do |child|
-      child.split_branch()
-    end
-    #puts "\nAll ERB content in ##{@index}:"
-    #pp erb_content
-    @branch_content ||= []
-    
-    atomic_sections = @atomic_sections || []
+    erb_content.map(&:split_branch)
 
+    @branch_content ||= []
+    atomic_sections = @atomic_sections || []
     if erb_content.empty?
       @branch_content << atomic_sections
       return
@@ -210,14 +205,8 @@ module SharedSexpMethods
     pivots = erb_content.select do |child|
       :invalid_ruby == child.sexp
     end.sort { |a, b| a.index <=> b.index }
-    #puts "Pivots in ##{self.index}:"
-    #pp pivots
     if pivots.empty?
-      branch_content = atomic_sections + erb_content
-      branch_content.sort! { |a, b| self.class.section_and_node_sort(a, b) }
-      #puts "Branch content for ##{@index} when no pivots:"
-      #pp branch_content
-      @branch_content << branch_content
+      add_branch_content(atomic_sections, erb_content)
       return
     end
     prev_pivot = pivots[0]
@@ -226,12 +215,8 @@ module SharedSexpMethods
     select_first_branch = lambda do |child|
       child.index > @index && child.index < prev_index
     end
-    branch_content = erb_content.select(&select_first_branch) +
-      atomic_sections.select(&select_first_branch)
-    unless branch_content.empty?
-      branch_content.sort! { |a, b| self.class.section_and_node_sort(a, b) }
-      @branch_content << branch_content
-    end
+    add_branch_content(atomic_sections.select(&select_first_branch),
+      erb_content.select(&select_first_branch))
     
     if :invalid_ruby == pivots[0].sexp
       prev_pivot = pivots[0]
@@ -242,22 +227,16 @@ module SharedSexpMethods
     pivots.each do |condition_pivot|
       next if prev_pivot == condition_pivot
       cond_pivot_index = condition_pivot.index
-      #puts "Looking at #{prev_pivot} through #{condition_pivot}"
       is_branch_child = lambda do |child|
         child.index > prev_index && child.index < cond_pivot_index
       end
       branch_erb = erb_content.select(&is_branch_child)
       branch_sections = atomic_sections.select(&is_branch_child)
-      branch_content = branch_erb + branch_sections
-      next if branch_content.empty?
-      branch_content.sort! { |a, b| self.class.section_and_node_sort(a, b) }
+      next if branch_erb.empty? && branch_sections.empty?
       if prev_pivot != self
-        copy_atomic_sections(branch_sections, prev_pivot)
-        copy_content(branch_erb, prev_pivot) unless branch_erb.empty?
-        delete_children_in_range(branch_content.first.index, cond_pivot_index-1)
+        copy_branch_content(branch_sections, branch_erb, prev_pivot, cond_pivot_index)
         @branch_content << [prev_pivot]
       end
-      
       prev_pivot = condition_pivot
       prev_index = prev_pivot.index
     end
@@ -269,16 +248,9 @@ module SharedSexpMethods
       end
       branch_sections = atomic_sections.select(&select_last_branch)
       branch_erb = erb_content.select(&select_last_branch)
-      copy_atomic_sections(branch_sections, prev_pivot)
-      copy_content(branch_erb, prev_pivot) unless branch_erb.empty?
-      branch_content = branch_erb + branch_sections
-      return if branch_content.empty?
-      branch_content.sort! { |a, b| self.class.section_and_node_sort(a, b) }
-      delete_children_in_range(branch_content.first.index, close_index-1)
-      @branch_content << branch_content
+      copy_branch_content(branch_sections, branch_erb, prev_pivot, close_index)
+      add_branch_content(branch_sections, branch_erb)
     end
-    #puts "Branch content:"
-    #pp @branch_content
   end
 
   def get_close_index(prev_pivot)
@@ -339,6 +311,22 @@ module SharedSexpMethods
   end
 
   private  
+    def add_branch_content(sections, erb)
+      branch_content = sections + erb
+      return if branch_content.empty?
+      branch_content.sort! { |a, b| self.class.section_and_node_sort(a, b) }
+      @branch_content << branch_content
+    end
+
+    def copy_branch_content(sections, erb, parent, final_index)
+      copy_atomic_sections(sections, parent)
+      copy_content(erb, parent) unless erb.empty?
+      branch_content = erb + sections
+      return if branch_content.empty?
+      branch_content.sort! { |a, b| self.class.section_and_node_sort(a, b) }
+      delete_children_in_range(branch_content.first.index, final_index-1)
+    end
+
     def copy_atomic_sections(sections, parent)
       sections.each do |section|
         parent.add_atomic_section(section)
