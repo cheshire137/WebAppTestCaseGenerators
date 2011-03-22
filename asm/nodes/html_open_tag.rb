@@ -30,11 +30,12 @@ module ERBGrammar
       trans = []
       tag_name = name()
 	  if source.is_a?(RailsURL)
-		source_uri = URI.parse(source.to_s)
+		source_uri = HTMLOpenTag.parse_uri_forgivingly(source.to_s)
 	  else
 		source_uri = source
 	  end
-    doc = Nokogiri::HTML(text_value)
+      return trans if source_uri.nil?
+      doc = Nokogiri::HTML(text_value)
 	  HTMLOpenTag.get_link_uris(source_uri, doc).each do |sink|
 		trans << LinkTransition.new(source, RailsURL.from_uri(sink), text_value)
 	  end

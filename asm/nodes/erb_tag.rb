@@ -8,7 +8,8 @@ module ERBGrammar
     extend SharedSexpMethods::ClassMethods
     include SharedTransitionMethods
     include SharedOpenTagMethods
-    FORM_METHODS = [:form_tag, :form_remote_tag].freeze
+    FORM_METHODS = [:form_tag, :form_remote_tag, :form_for, :remote_form_for,
+      :form_remote_for].freeze
     REDIRECT_METHODS = [:redirect_to, :redirect_to_full_url].freeze
     attr_accessor :content, :parent, :close, :branch_content, :overridden_ruby_code
 

@@ -107,6 +107,12 @@ module SharedSexpMethods
       src_controller = source.controller
     end
     sexp_args.each do |sexp|
+      if sexp.is_a?(Enumerable) && !sexp.empty?
+        if :ivar == sexp[0] && sexp.length >= 2
+          var_name = sexp[1].to_s.gsub(/@/, '')
+          return RailsURL.new(src_controller, nil, var_name)
+        end
+      end
       controller = self.class.get_sexp_hash_value(sexp, :controller) || src_controller
       action = self.class.get_sexp_hash_value(sexp, :action)
       unless action.nil?

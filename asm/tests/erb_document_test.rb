@@ -9,6 +9,17 @@ class ERBDocumentTest < Test::Unit::TestCase
                                 '(p1|p2|p3|p4)')
   end
 
+  def test_form_transitions
+    doc = assert_doc(fixture('_add_updates.html'),
+                     '_add_updates.html.erb')
+    trans = doc.get_transitions()
+    assert_not_nil trans
+    assert_equal 2, trans.length
+    trans.each do |transition|
+      assert_equal transition.class, FormTransition
+    end
+  end
+
   def test_loop_if_loop_component_expression
     assert_component_expression(fixture('game_index1-sans_unless.html'),
                                 'game_index1-sans_unless.html.erb',
@@ -197,9 +208,15 @@ class ERBDocumentTest < Test::Unit::TestCase
 
   private
     def assert_component_expression(erb, file_name, expected)
-      doc = Parser.new.parse(erb, file_name, URI.parse('/'))
-      assert_not_nil doc
+      doc = assert_doc(erb, file_name)
       actual = doc.component_expression()
       assert_equal expected, actual, "Wrong component expression for " + file_name
+    end
+
+    def assert_doc(erb, file_name)
+      rails_path = File.join("app", "views", "test", file_name)
+      doc = Parser.new.parse(erb, rails_path, URI.parse('http://example.com/'))
+      assert_not_nil doc
+      doc
     end
 end
