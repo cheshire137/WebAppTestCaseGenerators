@@ -15,6 +15,12 @@ class ERBDocumentTest < Test::Unit::TestCase
                                 'p1.(p2|(p3.p4*.p5))*.p6')
   end
 
+  def test_unless_loop_component_expression
+    assert_component_expression(fixture('unless_loop.html'),
+                                'unless_loop.html.erb',
+                                '((p1.p2*.p3)|NULL)')
+  end
+
   def test_case_when_component_expression
     assert_component_expression(fixture('case_when.html'),
                                 'case_when.html.erb',

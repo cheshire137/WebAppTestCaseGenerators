@@ -216,18 +216,19 @@ module SharedSexpMethods
   def split_branch
     # Return here when, for example, there's an if statement within an ERBOutputTag,
     # e.g., <%= (user.id == session[:user][:id]) ? 'you' : user.email %>
-    return unless respond_to?(:branch_content=)
-    return if :invalid_ruby == @sexp
+    return if !selection? || !respond_to?(:branch_content=) || :invalid_ruby == @sexp
     # Expect non-ERBTag content to be contained in AtomicSections, so
     # only get ERBTags who might have nested AtomicSections within them,
     # as opposed to HTMLOpenTags and whatnot that would be duplicated
     # within AtomicSections we've already got
     erb_content = (@content || []).select do |child|
       child.set_sexp() if child.sexp.nil?
-      child.is_a?(ERBGrammar::ERBTag)
+      child.is_a?(ERBGrammar::ERBTag) && child.respond_to?(:parent) && self == child.parent
     end
     # Split branches on contents first, in case there are nested case-whens
-    erb_content.map(&:split_branch)
+    erb_content.each do |child|
+      child.split_branch()
+    end
     #puts "\nAll ERB content in ##{@index}:"
     #pp erb_content
     @branch_content ||= []
@@ -245,7 +246,14 @@ module SharedSexpMethods
     end.sort { |a, b| a.index <=> b.index }
     #puts "Pivots in ##{self.index}:"
     #pp pivots
-    return if pivots.empty?
+    if pivots.empty?
+      branch_content = atomic_sections + erb_content
+      branch_content.sort! { |a, b| self.class.section_and_node_sort(a, b) }
+      #puts "Branch content for ##{@index} when no pivots:"
+      #pp branch_content
+      @branch_content << branch_content
+      return
+    end
     prev_pivot = pivots[0]
     prev_index = prev_pivot.index
 
@@ -288,10 +296,10 @@ module SharedSexpMethods
       prev_index = prev_pivot.index
     end
 
-    unless @close.nil?
-      #puts "Last index ##{prev_index}, Close ##{@close.index}"
+    if !@close.nil?
+      close_index = get_close_index(prev_pivot) || @close.index
       select_last_branch = lambda do |child|
-        child.index > prev_index && child.index < @close.index
+        child.index > prev_index && child.index < close_index
       end
       branch_sections = atomic_sections.select(&select_last_branch)
       branch_erb = erb_content.select(&select_last_branch)
@@ -300,11 +308,24 @@ module SharedSexpMethods
       branch_content = branch_erb + branch_sections
       return if branch_content.empty?
       branch_content.sort! { |a, b| self.class.section_and_node_sort(a, b) }
-      delete_children_in_range(branch_content.first.index, @close.index-1)
+      delete_children_in_range(branch_content.first.index, close_index-1)
       @branch_content << branch_content
     end
     #puts "Branch content:"
     #pp @branch_content
+  end
+
+  def get_close_index(prev_pivot)
+    if prev_pivot.respond_to?(:parent) && !prev_pivot.parent.nil?
+      prev_parent = prev_pivot.parent
+      if prev_parent.respond_to?(:close) && !prev_parent.close.nil?
+        prev_parent.close.index
+      else
+        nil
+      end
+    else
+      nil
+    end
   end
   
   def copy_atomic_sections(sections, parent)
