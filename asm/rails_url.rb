@@ -1,6 +1,8 @@
 require 'uri'
+require File.join(File.expand_path(File.join(File.dirname(__FILE__), '..')), 'html_parsing.rb')
 
 class RailsURL
+	extend SharedHtmlParsing::ClassMethods
   attr_reader :action, :controller, :raw_url, :site_root
 
   def initialize(ctrlr, act, raw, root='')
@@ -14,26 +16,31 @@ class RailsURL
   end
 
   def RailsURL.from_path(path, site_root='')
-  return nil if path.nil?
-  path_parts = path.split(File::ALT_SEPARATOR)
-  path = File.join(path_parts)
-	controller_prefix = File.join('app', 'views')
-	prefix_start = path.index(controller_prefix)
-	return nil if prefix_start.nil?
-	controller_index = prefix_start + controller_prefix.length
-	with_ext = path[controller_index...path.length]
-	ext_start = with_ext.index('.') || with_ext.length
-	without_ext = with_ext[0...ext_start]
-	controller = File.dirname(without_ext).gsub(/^\//, '')
-	action = File.basename(without_ext)
-	RailsURL.new(controller, action, nil, site_root)
+    return nil if path.nil?
+    path_parts = path.split(File::ALT_SEPARATOR)
+    path = File.join(path_parts)
+    controller_prefix = File.join('app', 'views')
+    prefix_start = path.index(controller_prefix)
+    return nil if prefix_start.nil?
+    controller_index = prefix_start + controller_prefix.length
+    with_ext = path[controller_index...path.length]
+    ext_start = with_ext.index('.') || with_ext.length
+    without_ext = with_ext[0...ext_start]
+    controller = File.dirname(without_ext).gsub(/^\//, '')
+    action = File.basename(without_ext)
+    RailsURL.new(controller, action, nil, site_root)
   end
-
+  
   def RailsURL.from_uri(uri)
-	if uri.nil? || !uri.is_a?(URI)
-	  raise ArgumentError, "Expected non-nil URI, got #{uri.class.name}"
-	end
-	RailsURL.new(nil, nil, uri.to_s)
+    if uri.nil? || !uri.is_a?(URI)
+      raise ArgumentError, "Expected non-nil URI, got #{uri.class.name}"
+    end
+    RailsURL.new(nil, nil, uri.to_s)
+  end
+  
+  def relative?
+    uri = to_uri()
+    uri.nil? ? false : uri.relative?
   end
 
   def url
@@ -49,5 +56,9 @@ class RailsURL
     #sprintf("%sRailsURL\n\t%sController: %s\n\t%sAction: %s\n\t%sRaw URL: %s",
     #        prefix, prefix, @controller, prefix, @action, prefix, @raw_url)
     url()
+  end
+  
+  def to_uri
+    RailsURL.parse_uri_forgivingly(url())
   end
 end

@@ -45,8 +45,9 @@ class ComponentInteractionModel
   end
 
   def to_s
+    tab = '  '
     trans_str = @transitions.collect do |trans|
-      trans.to_s("\t\t")
+      trans.to_s(tab * 2)
     end.join("\n")
     sprintf("Component Interaction Model\n\tStart page: %s\n\tStart URL: %s\n\tComponent expression: %s\n\tTransitions:\n%s", @start_page, start_url(), @component_expression, trans_str)
   end

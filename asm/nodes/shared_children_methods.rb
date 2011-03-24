@@ -13,13 +13,18 @@ module SharedChildrenMethods
         end
       end
     end
-    (@content || []).delete_if do |el|
+    should_delete_child = lambda do |el|
       if el.index >= start_index && el.index <= end_index
         #puts "Deleting element #{el}"
         true
       else
         false
       end
+    end
+    (@content || []).delete_if(&should_delete_child)
+    (@branch_content || []).delete_if do |arr|
+      arr.delete_if(&should_delete_child)
+      arr.empty?
     end
     #puts "Now there are #{@content.length} children"
     if respond_to?(:parent) && !self.parent.nil? && self.parent.respond_to?(:delete_children_in_range)

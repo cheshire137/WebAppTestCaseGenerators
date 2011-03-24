@@ -1,7 +1,7 @@
 require 'rubygems'
-require 'uri_extensions.rb'
 require 'open-uri'
-require File.join('..', 'html_parsing.rb')
+require File.join(File.join(File.expand_path(File.dirname(__FILE__)), '..'), 'html_parsing.rb')
+require File.join(File.join(File.expand_path(File.dirname(__FILE__)), '..'), 'uri_extensions.rb')
 
 class Page
   include SharedHtmlParsing
@@ -50,9 +50,10 @@ class Page
   end
 
   def Page.open_uri(uri)
+    return nil if uri.nil?
     begin
       stringio = open(uri.to_s)
-    rescue OpenURI::HTTPError => err
+    rescue => err
       printf("Got error '%s' trying to open URI %s, skipping...\n",
         err.to_s, uri.to_s)
       stringio = nil

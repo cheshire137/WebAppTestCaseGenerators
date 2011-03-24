@@ -5,7 +5,7 @@ require File.join(File.expand_path(File.dirname(__FILE__)), 'link_text.rb')
 
 module SharedHtmlParsing
   module ClassMethods
-    TransitionURITypes = [URI::HTTP, URI::FTP]
+    TransitionURITypes = [URI::HTTP, URI::FTP].freeze
     SubmitButtonTypes = ['submit', 'image'].freeze
 
     def get_uri_for_host(str, host_uri)
@@ -14,6 +14,9 @@ module SharedHtmlParsing
       end
       unless host_uri.is_a?(URI)
         raise ArgumentError, "Expected host URI, got #{host_uri.class.name}"
+      end
+      if host_uri.relative?
+        raise ArgumentError, "Expected absolute URI for host URI, got relative URI #{host_uri}"
       end
       return nil if str.length < 1
       rel_uri = parse_uri_forgivingly(str)
@@ -112,7 +115,7 @@ module SharedHtmlParsing
 
       def get_submit_buttons(inputs)
         (inputs || []).select do |input|
-          !input.nil? && SubmitButtonTypes.include?(input['type'].downcase)
+          !input.nil? && !input['type'].nil? && SubmitButtonTypes.include?(input['type'].downcase)
         end.collect do |input|
           value = input['value']
           if value.nil? || value.length < 1

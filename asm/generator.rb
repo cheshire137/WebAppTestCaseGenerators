@@ -1,7 +1,8 @@
 #!/usr/bin/env ruby
-require 'parser.rb'
+root_dir = File.expand_path(File.dirname(__FILE__))
+require File.join(root_dir, 'parser.rb')
 require 'find'
-require 'component_interaction_model.rb'
+require File.join(root_dir, 'component_interaction_model.rb')
 
 unless ARGV.length == 2
   printf("Usage: %s path_to_rails_app_root root_url_of_site\n", $0)
@@ -49,10 +50,10 @@ Find.find(views_path) do |path|
         next
       end
       ast = Parser.new.parse(erb, path, root_url)
-	  if ast.nil?
-		printf("Could not parse file %s, skipping\n", path)
-		next
-	  end
+      if ast.nil?
+        printf("Could not parse file %s, skipping\n", path)
+        next
+      end
       expr = ast.component_expression()
       sections = ast.get_atomic_sections()
       trans = ast.get_transitions()

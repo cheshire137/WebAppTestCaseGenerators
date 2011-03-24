@@ -1,26 +1,29 @@
-require File.join('..', 'html_parsing.rb')
+require File.join(
+  File.expand_path(File.join(File.dirname(__FILE__), '..', '..')),
+  'html_parsing.rb'
+)
 require 'rubygems'
 require 'nokogiri'
 
 module ERBGrammar
   class HTMLOpenTag < Treetop::Runtime::SyntaxNode
-	include SharedOpenTagMethods
-	include SharedHTMLTagMethods
+    include SharedOpenTagMethods
+    include SharedHTMLTagMethods
     include SharedSexpParsing
     include SharedSexpMethods
     extend SharedSexpMethods::ClassMethods
     include SharedTransitionMethods
-	include SharedHtmlParsing
-	extend SharedHtmlParsing::ClassMethods
+    include SharedHtmlParsing
+    extend SharedHtmlParsing::ClassMethods
     attr_accessor :content, :close
 
-	def ==(other)
-	  super(other) && prop_eql?(other, :name, :attributes_str)
-	end
+    def ==(other)
+      super(other) && prop_eql?(other, :name, :attributes_str)
+    end
 
-	def attributes
-	  attrs.empty? ? [] : attrs.to_a
-	end
+    def attributes
+      attrs.empty? ? [] : attrs.to_a
+    end
 
     def attributes_str
       attrs.empty? ? '' : attrs.to_s
@@ -29,23 +32,23 @@ module ERBGrammar
     def get_local_transitions(source)
       trans = []
       tag_name = name()
-	  if source.is_a?(RailsURL)
-		source_uri = URI.parse(source.to_s)
-	  else
-		source_uri = source
-	  end
-    doc = Nokogiri::HTML(text_value)
-	  HTMLOpenTag.get_link_uris(source_uri, doc).each do |sink|
-		trans << LinkTransition.new(source, RailsURL.from_uri(sink), text_value)
-	  end
-	  HTMLOpenTag.get_form_uris(source_uri, doc).each do |sink|
+      if source.is_a?(RailsURL)
+        source_uri = source.to_uri()
+      else
+        source_uri = source
+      end
+      doc = Nokogiri::HTML(text_value)
+      HTMLOpenTag.get_link_uris(source_uri, doc).each do |sink|
+        trans << LinkTransition.new(source, RailsURL.from_uri(sink), text_value)
+      end
+      HTMLOpenTag.get_form_uris(source_uri, doc).each do |sink|
         trans << FormTransition.new(source, RailsURL.from_uri(sink), text_value)
-	  end
+      end
       trans
     end
 
     def hash
-	  prop_hash(:name, :attributes_str)
+      prop_hash(:name, :attributes_str)
     end
 
     def name

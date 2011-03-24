@@ -1,12 +1,13 @@
 require 'rubygems'
 require 'ruby_parser'
-require 'atomic_section.rb'
-require 'rails_url.rb'
-require 'transition.rb'
-require 'form_transition.rb'
-require 'link_transition.rb'
-require 'redirect_transition.rb'
-require 'range.rb'
+root_dir = File.join(File.expand_path(File.dirname(__FILE__)), '..')
+require File.join(root_dir, 'atomic_section.rb')
+require File.join(root_dir, 'rails_url.rb')
+require File.join(root_dir, 'transition.rb')
+require File.join(root_dir, 'form_transition.rb')
+require File.join(root_dir, 'link_transition.rb')
+require File.join(root_dir, 'redirect_transition.rb')
+require File.join(root_dir, 'range.rb')
 
 module ERBGrammar
   class ERBDocument < Treetop::Runtime::SyntaxNode

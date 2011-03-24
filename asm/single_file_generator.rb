@@ -1,8 +1,9 @@
 #!/usr/bin/env ruby
-require 'parser.rb'
+root_dir = File.expand_path(File.dirname(__FILE__))
+require File.join(root_dir, 'parser.rb')
 require 'optparse'
 require 'pp'
-require 'component_interaction_model.rb'
+require File.join(root_dir, 'component_interaction_model.rb')
 
 options = {}
 optparse = OptionParser.new do |opts|

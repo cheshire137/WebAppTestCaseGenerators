@@ -27,6 +27,9 @@ class Transition
   end
 
   def to_s(prefix='')
-    sprintf("\t%s<%s> --> <%s>\n%s\tUnderlying code: %s", prefix, @source, @sink, prefix, @code)
+    tab = '  '
+    sprintf("%s%s<%s> --> <%s>\n%s%sUnderlying code:\n%s%s%s%s",
+            tab, prefix, @source, @sink, prefix, tab,
+            prefix, tab, tab, (@code || '').strip)
   end
 end

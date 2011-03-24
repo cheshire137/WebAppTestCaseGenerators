@@ -171,7 +171,7 @@ class ERBDocumentTest < Test::Unit::TestCase
 
   private
     def assert_component_expression(erb, file_name, expected)
-      doc = Parser.new.parse(erb, file_name, URI.parse('/'))
+      doc = Parser.new.parse(erb, file_name, URI.parse('http://example.com/'))
       assert_not_nil doc
       actual = doc.component_expression()
       assert_equal expected, actual, "Wrong component expression for " + file_name

@@ -1,7 +1,7 @@
-require 'uri_extensions.rb'
-require 'page.rb'
-require 'link.rb'
-require 'pfd.rb'
+require File.join(File.expand_path(File.dirname(__FILE__)), 'page.rb')
+require File.join(File.expand_path(File.dirname(__FILE__)), 'link.rb')
+require File.join(File.expand_path(File.dirname(__FILE__)), 'pfd.rb')
+require File.join(File.join(File.expand_path(File.dirname(__FILE__)), '..'), 'uri_extensions.rb')
 require 'pp'
 
 class Site

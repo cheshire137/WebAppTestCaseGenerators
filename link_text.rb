@@ -1,3 +1,5 @@
+require File.join(File.expand_path(File.dirname(__FILE__)), 'uri_extensions.rb')
+
 class LinkText
   attr_reader :uri, :uri_parts, :description
 

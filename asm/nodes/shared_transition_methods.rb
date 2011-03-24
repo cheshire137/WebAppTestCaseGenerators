@@ -3,6 +3,12 @@ module ERBGrammar
     attr_reader :transitions
 
     def identify_transitions(source_rails_url, root_url)
+      if source_rails_url.relative?
+        source_rails_url = RailsURL.new(source_rails_url.controller,
+                                        source_rails_url.action,
+                                        source_rails_url.raw_url,
+                                        root_url)
+      end
       @transitions = get_local_transitions(source_rails_url)
       children = []
       children += @content || [] if respond_to?(:content)
