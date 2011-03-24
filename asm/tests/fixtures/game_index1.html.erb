@@ -1,14 +1,11 @@
 <% unless @games.empty? %>
   <tr>
-    <% #Look through the list of games and write out a link that passes the game ID ot the join view.
-    @games.each do |game| %>
+    <% @games.each do |game| %>
       <% if game.players.empty? %>
         No players currently in game
       <% else %>
         <ol class="players">
-            <% #Assuming that the game has players in it, loop through the list of players
-                 #and write out their names.
-                game.players.each do |user| %>
+            <% game.players.each do |user| %>
                 <li>
                   <%= (user.id == session[:user][:id]) ? 'you' : user.email %>
                 </li>
@@ -17,7 +14,4 @@
       <% end #end if %>
     <% end #games loop %>
   </tr>
-<% end #unless
-# With unless block: (NULL|(p1.(p2|(p3.p4*.p5))*.p6))
-# Without: p1.(p2|(p3.p4*.p5))*.p6
-%>
+<% end #unless %>

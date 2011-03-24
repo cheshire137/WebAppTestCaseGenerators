@@ -60,12 +60,12 @@ module ERBGrammar
     end
 
     def pair_match?(other)
-	  opposite_type_same_name?(HTMLCloseTag, other)
+      opposite_type_same_name?(HTMLCloseTag, other)
     end
 
     def to_s(indent_level=0)
-	  to_s_with_prefix(indent_level, sprintf("%s %s\n%s",
-		name, attributes_str, content_str(indent_level+1)))
+      to_s_with_prefix(indent_level, sprintf("%s %s\n%s",
+        name, attributes_str, content_str(indent_level+1)))
     end
   end
 end

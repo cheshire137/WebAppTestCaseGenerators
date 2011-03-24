@@ -23,6 +23,9 @@ module ERBGrammar
     def add_atomic_section(section)
       return if section.nil?
       section_index = section.index
+      if section_index <= @index
+        raise ArgumentError, "Cannot set section #{section} to be child of #{self}--index is too low"
+      end
       if @atomic_sections.nil? || @atomic_sections.empty?
         @atomic_sections = [section]
       else
@@ -206,23 +209,6 @@ module ERBGrammar
         branches_str = branches_exprs.join('|')
         branches_str = 'NULL' if branches_str.blank?
         sprintf("(%s)", branches_str)
-      end
-
-      def nodes_to_atomic_section_content(sections)
-        child_section_erb = sections.collect do |section|
-          if section.content.nil? || section.content.length < 1
-            next
-          end
-          code_lines = section.content.map(&:text_value)
-          FakeERBOutput.new(code_lines, section.content.first.index)
-        end.compact
-        true_kids = child_section_erb.select do |node|
-          selection_true_case?(node.sexp)
-        end
-        false_kids = child_section_erb.select do |node|
-          selection_false_case?(node.sexp)
-        end
-        [true_kids, false_kids]
       end
 
       def check_true_and_false_sections(true_sections, false_sections)

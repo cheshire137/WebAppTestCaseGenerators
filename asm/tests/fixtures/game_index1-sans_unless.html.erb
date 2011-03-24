@@ -1,0 +1,18 @@
+<tr>
+  <% #Look through the list of games and write out a link that passes the game ID ot the join view.
+  @games.each do |game| %>
+    <% if game.players.empty? %>
+      No players currently in game
+    <% else %>
+      <ol class="players">
+          <% #Assuming that the game has players in it, loop through the list of players
+               #and write out their names.
+              game.players.each do |user| %>
+              <li>
+                <%= (user.id == session[:user][:id]) ? 'you' : user.email %>
+              </li>
+          <% end %>
+      </ol>
+    <% end #end if %>
+  <% end #games loop %>
+</tr>

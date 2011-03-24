@@ -107,6 +107,12 @@ module SharedSexpMethods
       src_controller = source.controller
     end
     sexp_args.each do |sexp|
+      if sexp.is_a?(Enumerable) && !sexp.empty?
+        if :ivar == sexp[0] && sexp.length >= 2
+          var_name = sexp[1].to_s.gsub(/@/, '')
+          return RailsURL.new(src_controller, nil, var_name)
+        end
+      end
       controller = self.class.get_sexp_hash_value(sexp, :controller) || src_controller
       action = self.class.get_sexp_hash_value(sexp, :action)
       unless action.nil?
@@ -169,21 +175,6 @@ module SharedSexpMethods
     #puts ''
   end
 
-  def selection_true_case?(exp_true_sexp)
-    true_case = @sexp[2]
-    sexp_contains_sexp?(exp_true_sexp, true_case)
-  end
-
-  def selection_false_case?(exp_false_sexp)
-    case @sexp[0]
-    when :case
-      false_case = @sexp[3...@sexp.length]
-    else
-      false_case = @sexp[3]
-    end
-    sexp_contains_sexp?(exp_false_sexp, false_case)
-  end
-
   # p -> p1 | p2 (conditionals)
   def selection?
     set_sexp() if @sexp.nil?
@@ -194,179 +185,93 @@ module SharedSexpMethods
     false
   end
 
-  # p -> p1 | p2 (conditionals)
-  # TODO: expand to handle multiple branches, not just if and else cases
-  def selection_with_contents?(exp_true_case_contents, exp_false_case_contents)
-    unless exp_true_case_contents.is_a?(Sexp) && exp_false_case_contents.is_a?(Sexp)
-      raise ArgumentError, "Expected parameters to be of type Sexp"
-    end
-    set_sexp() if @sexp.nil?
-    return false if :invalid_ruby == @sexp || !selection?
-    condition = @sexp[1]
-    act_true_case_contents = @sexp[2]
-    act_false_case_contents = @sexp[3]
-    if self.class.sexp_outer_keyword?(act_false_case_contents, :block)
-      block_contents = act_false_case_contents[1...act_false_case_contents.length]
-    else
-      block_contents = act_false_case_contents
-    end
-    exp_true_case_contents == act_true_case_contents && exp_false_case_contents == block_contents
-  end
-
   def split_branch
     # Return here when, for example, there's an if statement within an ERBOutputTag,
     # e.g., <%= (user.id == session[:user][:id]) ? 'you' : user.email %>
-    return unless respond_to?(:branch_content=)
-    return if :invalid_ruby == @sexp
+    return if !selection? || !respond_to?(:branch_content=) || :invalid_ruby == @sexp
     # Expect non-ERBTag content to be contained in AtomicSections, so
     # only get ERBTags who might have nested AtomicSections within them,
     # as opposed to HTMLOpenTags and whatnot that would be duplicated
     # within AtomicSections we've already got
     erb_content = (@content || []).select do |child|
       child.set_sexp() if child.sexp.nil?
-      child.is_a?(ERBGrammar::ERBTag)
+      child.is_a?(ERBGrammar::ERBTag) && child.respond_to?(:parent) && self == child.parent
     end
-    #puts "\nAll ERB content:"
-    #pp erb_content
-    case @sexp[0]
-    when :case
-      split_case_branch(erb_content)
-    else
-      split_if_else_branch(erb_content)
-    end
-  end
-  
-  def split_case_branch(erb_content)
     # Split branches on contents first, in case there are nested case-whens
     erb_content.map(&:split_branch)
+
     @branch_content ||= []
-    return if @close.nil?
-    
     atomic_sections = @atomic_sections || []
+    if erb_content.empty?
+      @branch_content << atomic_sections
+      return
+    end
+
     # Find all invalid Ruby, and assume it's the pivot points
     pivots = erb_content.select do |child|
       :invalid_ruby == child.sexp
     end.sort { |a, b| a.index <=> b.index }
-    return if pivots.empty? || pivots.length < 2
-    
+    if pivots.empty?
+      add_branch_content(atomic_sections, erb_content)
+      return
+    end
     prev_pivot = pivots[0]
     prev_index = prev_pivot.index
-    (pivots[1...pivots.length] + [@close]).each do |condition_pivot|
+
+    select_first_branch = lambda do |child|
+      child.index > @index && child.index < prev_index
+    end
+    add_branch_content(atomic_sections.select(&select_first_branch),
+      erb_content.select(&select_first_branch))
+    
+    if :invalid_ruby == pivots[0].sexp
+      prev_pivot = pivots[0]
+    else
+      prev_pivot = self
+    end
+    prev_index = prev_pivot.index
+    pivots.each do |condition_pivot|
+      next if prev_pivot == condition_pivot
       cond_pivot_index = condition_pivot.index
       is_branch_child = lambda do |child|
         child.index > prev_index && child.index < cond_pivot_index
       end
       branch_erb = erb_content.select(&is_branch_child)
       branch_sections = atomic_sections.select(&is_branch_child)
-      branch_content = branch_erb + branch_sections
-      if branch_content.empty?
-        #puts "No content in branch with condition pivot #{condition_pivot}"
-        next
+      next if branch_erb.empty? && branch_sections.empty?
+      if prev_pivot != self
+        copy_branch_content(branch_sections, branch_erb, prev_pivot, cond_pivot_index)
+        @branch_content << [prev_pivot]
       end
-      branch_content.sort! { |a, b| self.class.section_and_node_sort(a, b) }
-      copy_atomic_sections(branch_sections, prev_pivot)
-      copy_content(branch_erb, prev_pivot)
-      delete_children_in_range(branch_content.first.index, branch_content.last.index)
-      @branch_content << [condition_pivot]
-      
       prev_pivot = condition_pivot
       prev_index = prev_pivot.index
     end
-  end
-  
-  def copy_atomic_sections(sections, parent)
-    sections.each do |section|
-      parent.add_atomic_section(section)
-    end
-  end
-  
-  def copy_content(new_content, parent)
-    if parent.content.nil? || parent.content.empty?
-      # TODO: do I need to check that all elements in the included
-      # content have an index > parent.index and <
-      # parent.close?
-      parent.content = new_content
-    else
-      raise "Cannot set content of #{parent}, it is already set"
-    end
-  end
-  
-  def split_if_else_branch(erb_content)
-    atomic_sections = @atomic_sections || []
-    true_erb = erb_content.select do |child|
-      selection_true_case?(child.sexp)
-    end
-    true_sections = atomic_sections.select do |section|
-      section.set_sexp() if section.sexp.nil?
-      selection_true_case?(section.sexp)
-    end
-    true_content = true_erb + true_sections
-    false_erb = erb_content.select do |child|
-      selection_false_case?(child.sexp)
-    end
-    false_sections = atomic_sections.select do |section|
-      selection_false_case?(section.sexp)
-    end
-    sort_and_set_true_false_content(true_content, false_erb, false_sections)
-  end
-  
-  def sort_and_set_true_false_content(true_content, false_erb, false_sections)
-    false_content = false_erb + false_sections
-    true_content.sort! { |a, b| self.class.section_and_node_sort(a, b) }
-    false_content.sort! { |a, b| self.class.section_and_node_sort(a, b) }
-    self.branch_content ||= []
-    self.branch_content << true_content
-    self.branch_content << false_content
-    last_true_index = first_false_index = -1
-    unless true_content.nil? || true_content.empty?
-      last_true = true_content.last
-      last_true_index = last_true.index
-      if last_true.respond_to?(:range) && !last_true.range.nil?
-        last_true_index = last_true.range.to_a.last
+
+    if !@close.nil?
+      close_index = get_close_index(prev_pivot) || @close.index
+      select_last_branch = lambda do |child|
+        child.index > prev_index && child.index < close_index
       end
-      #puts "Last index in true content: " + last_true_index.to_s
-    end
-    unless false_content.nil? || false_content.empty?
-      first_false_index = false_content.first.index
-      #puts "First index in false content: " + first_false_index.to_s
-    end
-    if 2 == (first_false_index - last_true_index)
-      pivot_if_else(last_true_index, false_erb, false_sections)
-    end
-  end
-  
-  def pivot_if_else(last_true_index, false_erb, false_sections)
-    pivot_index = last_true_index + 1
-    condition_pivot = @content.find do |child|
-      child.respond_to?(:content=) && pivot_index == child.index
-    end
-    unless condition_pivot.nil?
-      # Move if's close to be the close of this else
-      condition_pivot.close = @close
-
-      copy_content(false_erb, condition_pivot)
-      copy_atomic_sections(false_sections, condition_pivot)
-      
-      # Set the if's close to now be this else
-      condition_pivot.parent = self
-      @close = condition_pivot
-
-      #if @close.respond_to?(:split_branches)
-        # In case the else block has its own nested ifs with atomic sections,
-        # need to split those out, too
-        #@close.split_branches()
-      #end
-      
-      # Wipe out the content that had contained the stuff that is now the
-      # content of the conditional's pivot element (e.g., the else), so we
-      # don't have repeated content/sections elsewhere.
-      start_del_range = pivot_index
-      end_del_range = condition_pivot.close.index
-      #puts "Deleting children in range #{start_del_range}-#{end_del_range}"
-      delete_children_in_range(start_del_range, end_del_range)
+      branch_sections = atomic_sections.select(&select_last_branch)
+      branch_erb = erb_content.select(&select_last_branch)
+      copy_branch_content(branch_sections, branch_erb, prev_pivot, close_index)
+      add_branch_content(branch_sections, branch_erb)
     end
   end
 
+  def get_close_index(prev_pivot)
+    if prev_pivot.respond_to?(:parent) && !prev_pivot.parent.nil?
+      prev_parent = prev_pivot.parent
+      if prev_parent.respond_to?(:close) && !prev_parent.close.nil?
+        prev_parent.close.index
+      else
+        nil
+      end
+    else
+      nil
+    end
+  end
+ 
   # p -> p1* (loops)
   def iteration?
     set_sexp() if @sexp.nil?
@@ -411,7 +316,39 @@ module SharedSexpMethods
     false
   end
 
-  private
+  private  
+    def add_branch_content(sections, erb)
+      branch_content = sections + erb
+      return if branch_content.empty?
+      branch_content.sort! { |a, b| self.class.section_and_node_sort(a, b) }
+      @branch_content << branch_content
+    end
+
+    def copy_branch_content(sections, erb, parent, final_index)
+      copy_atomic_sections(sections, parent)
+      copy_content(erb, parent) unless erb.empty?
+      branch_content = erb + sections
+      return if branch_content.empty?
+      branch_content.sort! { |a, b| self.class.section_and_node_sort(a, b) }
+      delete_children_in_range(branch_content.first.index, final_index-1)
+    end
+
+    def copy_atomic_sections(sections, parent)
+      sections.each do |section|
+        parent.add_atomic_section(section)
+      end
+    end
+   
+    def copy_content(new_content, parent)
+      return if parent.nil?
+      (new_content || []).each do |child|
+        if child.index <= parent.index
+          raise ArgumentError, "Cannot set element #{child} to be child of #{parent}--index is too low"
+        end
+      end
+      parent.content = new_content
+    end
+
     def sexp_calls_enumerable_method?(sexp)
       ITERATION_METHODS.each do |method_name|
         return true if self.class.sexp_outer_call?(sexp, method_name)
