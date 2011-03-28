@@ -39,6 +39,9 @@ task 'tex2pdf' do
 \\usepackage[pdfborder={0 0 0}]{hyperref}  
 \\hypersetup{pdfborder=0 0 0}
 \\begin{document}
+\\title{Appendix A}
+\\author{Sarah Vessels}
+\\maketitle
 \\tableofcontents
 HERE
   file_footer = "\\end{document}"
