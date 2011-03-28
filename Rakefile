@@ -1,7 +1,19 @@
 task 'stats' do
   require 'scriptlines'
-  files = FileList['asm/nodes/*.rb'] + FileList['asm/*.rb'] + FileList['asm/tests/*.rb'] + FileList['qmz/*.rb'] + FileList['*.rb']
-  files -= ['scriptlines.rb']
+  get_stats(get_asm_files() + get_qmz_files())
+end
+
+task 'asm_stats' do
+  require 'scriptlines'
+  get_stats(get_asm_files())
+end
+
+task 'qmz_stats' do
+  require 'scriptlines'
+  get_stats(get_qmz_files())
+end
+
+def get_stats(files)
   puts ScriptLines.headline
   sum = ScriptLines.new("TOTAL (#{files.size} file(s))")
   
@@ -17,4 +29,16 @@ task 'stats' do
 
   # Print total stats.
   puts sum
+end
+
+def get_asm_files
+  files = FileList['asm/nodes/*.rb'] + FileList['asm/*.rb'] + FileList['asm/tests/*.rb'] + FileList['*.rb'] + FileList['asm/*.treetop']
+  files -= ['scriptlines.rb']
+  files
+end
+
+def get_qmz_files
+  files = FileList['qmz/*.rb'] + FileList['*.rb']
+  files -= ['scriptlines.rb']
+  files
 end

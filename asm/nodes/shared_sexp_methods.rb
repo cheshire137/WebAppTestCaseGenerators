@@ -4,8 +4,8 @@ module SharedSexpMethods
   ITERATION_METHODS = [:each, :each_with_index, :each_cons, :each_entry,
     :each_slice, :each_with_object, :upto, :downto, :times].freeze
   URL_METHODS = [:url_for].freeze
-  attr_accessor :sexp
-
+  attr_accessor :sexp, :has_been_split
+  
   module ClassMethods
     # If the given Sexp contains a call to the given method name, the Sexp
     # representing the arguments passed in that method call will be returned.
@@ -185,8 +185,6 @@ module SharedSexpMethods
     false
   end
 
-  attr_accessor :has_been_split
-  
   def split_branch
     return unless @has_been_split.nil?
     @has_been_split = true
