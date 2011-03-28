@@ -8,6 +8,12 @@ class ERBDocumentTest < Test::Unit::TestCase
                                 'elsif.html.erb',
                                 '(p1|p2|p3|p4)')
   end
+  
+  def test_nested_case_when_elsif_component_expression
+    assert_component_expression(fixture('nested_case_when.html'),
+                                'nested_case_when.html.erb',
+                                '((p1|p2|p3)|(p4|p5|p6)|p7)')
+  end
 
   def test_form_transitions
     doc = assert_doc(fixture('_add_updates.html'),

@@ -1,0 +1,23 @@
+<% case var %>
+<% when 5 %>
+  <% case var2 %>
+  <% when 6 %>
+    It's six!
+  <% when 6.5 %>
+    It's six and a half!
+  <% else %>
+    It's 6.75!
+  <% end %>
+<% when 7 %>
+  <% if condition1 %>
+    <html>
+  <% elsif condition2 %>
+    <%= some_var %>
+    <%= method_call() %>
+    <B>A bold statement!</B>
+  <% else %>
+    <p>Paragraph</p>
+  <% end %>
+<% else %>
+  It's neither 5 nor 7!
+<% end %>

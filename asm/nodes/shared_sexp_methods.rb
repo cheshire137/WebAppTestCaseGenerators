@@ -185,7 +185,11 @@ module SharedSexpMethods
     false
   end
 
+  attr_accessor :has_been_split
+  
   def split_branch
+    return unless @has_been_split.nil?
+    @has_been_split = true
     # Return here when, for example, there's an if statement within an ERBOutputTag,
     # e.g., <%= (user.id == session[:user][:id]) ? 'you' : user.email %>
     return if !selection? || !respond_to?(:branch_content=) || :invalid_ruby == @sexp
