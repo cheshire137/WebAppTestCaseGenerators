@@ -15,7 +15,10 @@ task 'qmz_stats' do
 end
 
 task 'code2tex' do
-  cmd_prefix = "source-highlight -f latex --output-dir=tex -n --tab=2 --lang-def=ruby.lang"
+  del_tex_cmd = "rm tex/*.tex"
+  puts del_tex_cmd
+  `#{del_tex_cmd}`
+  cmd_prefix = "source-highlight -f latexcolor --output-dir=tex -n --tab=2 --lang-def=ruby.lang"
   files = (get_asm_files() + get_qmz_files()).uniq
   files.each do |fn|
     cmd = cmd_prefix + ' ' + fn
@@ -26,14 +29,19 @@ end
 
 task 'tex2pdf' do
   file_header = <<HERE
-\\documentclass[12pt]{article}
+\\documentclass[11pt]{article}
 \\usepackage[left=2cm,top=2cm,bottom=2cm,right=2cm,nohead,nofoot]{geometry}
+\\usepackage[usenames,dvipsnames]{color}
 \\begin{document}
 HERE
   file_footer = "\\end{document}"
   tex_files = FileList['tex/*.tex'].sort
   header_format = "\\section{%s}"
+  input_format = "\\input{%s}"
   combined_file = 'combined_tex.tex'
+  del_combined_tex_cmd = "rm #{combined_file}"
+  puts del_combined_tex_cmd
+  `#{del_combined_tex_cmd}`
   puts "Writing combined TeX file..."
   open(combined_file, 'w') do |f|
     f.puts file_header
@@ -42,10 +50,8 @@ HERE
       ruby_fn = File.basename(fn, '.tex')
       header_tex = sprintf(header_format, ruby_fn.gsub(/_/, '\\_'))
       f.puts header_tex
-      lines = IO.readlines(fn)
-      lines.each do |line|
-        f.puts line
-      end
+      input_tex = sprintf(input_format, fn)
+      f.puts input_tex
     end
     f.puts file_footer
   end
