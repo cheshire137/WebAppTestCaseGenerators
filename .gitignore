@@ -1,3 +1,7 @@
 .*.swp
 tex/*.tex
 *.tex
+*.aux
+*.out
+*.log
+*.toc

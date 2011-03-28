@@ -1,29 +1,33 @@
 task 'stats' do
   require 'scriptlines'
-  files = (get_asm_files() + get_qmz_files()).uniq
+  files = (get_asm_files() + get_qmz_files() + get_shared_files()).uniq
   get_stats(files)
 end
 
 task 'asm_stats' do
   require 'scriptlines'
-  get_stats(get_asm_files())
+  get_stats(get_asm_files() + get_shared_files())
 end
 
 task 'qmz_stats' do
   require 'scriptlines'
-  get_stats(get_qmz_files())
+  get_stats(get_qmz_files() + get_shared_files())
 end
 
 task 'code2tex' do
-  del_tex_cmd = "rm tex/*.tex"
+  del_tex_cmd = "rm tex/asm/*.tex; rm tex/qmz/*.tex; rm tex/shared/*.tex"
   puts del_tex_cmd
   `#{del_tex_cmd}`
-  cmd_prefix = "source-highlight -f latexcolor --output-dir=tex -n --tab=2 --lang-def=ruby.lang"
-  files = (get_asm_files() + get_qmz_files()).uniq
-  files.each do |fn|
-    cmd = cmd_prefix + ' ' + fn
-    puts cmd
-    `#{cmd}`
+  {'asm' => get_asm_files(),
+   'qmz' => get_qmz_files(),
+   'shared' => get_shared_files()}.each do |dir_name, files|
+    puts "Converting #{dir_name} files to TeX..."
+    cmd_prefix = "source-highlight -f latexcolor --output-dir=tex/#{dir_name} -n --tab=2 --lang-def=ruby.lang"
+    files.each do |fn|
+      cmd = cmd_prefix + ' ' + fn
+      puts cmd
+      `#{cmd}`
+    end
   end
 end
 
@@ -32,12 +36,15 @@ task 'tex2pdf' do
 \\documentclass[11pt]{article}
 \\usepackage[left=2cm,top=2cm,bottom=2cm,right=2cm,nohead,nofoot]{geometry}
 \\usepackage[usenames,dvipsnames]{color}
+\\usepackage[pdfborder={0 0 0}]{hyperref}  
+\\hypersetup{pdfborder=0 0 0}
 \\begin{document}
+\\tableofcontents
 HERE
   file_footer = "\\end{document}"
-  tex_files = FileList['tex/*.tex'].sort
-  header_format = "\\section{%s}"
-  input_format = "\\input{%s}"
+  tex_files = {'Atomic Section Model Tool' => FileList['tex/asm/*.tex'],
+    'Qian, Miao, Zeng Model Tool' => FileList['tex/qmz/*.tex'],
+    'Shared Files' => FileList['tex/shared/*.tex']}
   combined_file = 'combined_tex.tex'
   del_combined_tex_cmd = "rm #{combined_file}"
   puts del_combined_tex_cmd
@@ -45,13 +52,14 @@ HERE
   puts "Writing combined TeX file..."
   open(combined_file, 'w') do |f|
     f.puts file_header
-    tex_files.each do |fn|
-      puts "Appending contents of #{fn}..."
-      ruby_fn = File.basename(fn, '.tex')
-      header_tex = sprintf(header_format, ruby_fn.gsub(/_/, '\\_'))
-      f.puts header_tex
-      input_tex = sprintf(input_format, fn)
-      f.puts input_tex
+    tex_files.each do |files_header, files|
+      puts "Appending #{files_header} files..."
+      f.puts sprintf("\\section{%s}", files_header)
+      files.each do |fn|
+        ruby_fn = File.basename(fn, '.tex')
+        f.puts sprintf("\\subsection{%s}", ruby_fn.gsub(/_/, '\\_'))
+        f.puts sprintf("\\input{%s}", fn)
+      end
     end
     f.puts file_footer
   end
@@ -80,13 +88,15 @@ def get_stats(files)
 end
 
 def get_asm_files
-  files = FileList['asm/nodes/*.rb'] + FileList['asm/*.rb'] + FileList['asm/tests/*.rb'] + FileList['*.rb'] + FileList['asm/*.treetop']
-  files -= ['scriptlines.rb']
-  files
+  FileList['asm/nodes/*.rb'] + FileList['asm/*.rb'] + FileList['asm/tests/*.rb'] + FileList['asm/*.treetop']
 end
 
 def get_qmz_files
-  files = FileList['qmz/*.rb'] + FileList['*.rb']
+  FileList['qmz/*.rb']
+end
+
+def get_shared_files
+  files = FileList['*.rb']
   files -= ['scriptlines.rb']
   files
 end
