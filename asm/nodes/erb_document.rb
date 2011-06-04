@@ -1,3 +1,19 @@
+# Web application test path generators
+# Copyright (C) 2011 Sarah Vessels <cheshire137@gmail.com>
+#  
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 require 'rubygems'
 require 'ruby_parser'
 root_dir = File.join(File.expand_path(File.dirname(__FILE__)), '..')
@@ -302,9 +318,14 @@ module ERBGrammar
           raise "Given split needle had no pieces:\nNeedle: #{needle}\nHaystack: #{haystack}\nSplit needle: #{split_needle.inspect}"
         end
         length_of_separator = 1
-        #puts "Code starts: [" + code_starts.collect { |c| (c || 'nil').to_s }.join(', ') + ']'
+#        pp split_needle
+#        puts '-------'
+#        pp haystack
+#        puts "Code starts: [" + code_starts.collect { |c| (c || 'nil').to_s }.join(', ') + ']'
         code_starts.each_with_index do |code_start, i|
           cur_needle = split_needle[i]
+#          puts "Cur needle:"
+#          pp cur_needle
           if 0 == i
             if code_start.nil?
               return nil
@@ -326,7 +347,7 @@ module ERBGrammar
             end
 
             expected_code_start = prev_code_start + prev_needle.length + length_between + length_of_separator
-            #puts "Expected code start #{expected_code_start}, instead got #{code_start}"
+#            puts "Expected code start #{expected_code_start}, instead got #{code_start.inspect}"
 
             if code_start.nil? || code_start != expected_code_start
               raise "Could not find ::#{needle}:: within ::#{haystack}:: in order to split multiple ERB statements in a single ERB tag into separate ERB tags; specifically could not find #{cur_needle}"
@@ -364,6 +385,9 @@ module ERBGrammar
       def self.get_before_and_after_code(code_line, cur_code, split_code)
         default = [nil, nil]
         return default if code_line == cur_code
+#        puts "Split code:"
+#        pp split_code
+#        puts '---'
         replace_index = find_code_start_within_code(code_line, cur_code, split_code)
         return default if replace_index.nil?
         replace_index_end = replace_index + code_line.length

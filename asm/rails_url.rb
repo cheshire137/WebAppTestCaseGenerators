@@ -1,3 +1,19 @@
+# Web application test path generators
+# Copyright (C) 2011 Sarah Vessels <cheshire137@gmail.com>
+#  
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 require 'uri'
 require File.join(File.expand_path(File.join(File.dirname(__FILE__), '..')), 'html_parsing.rb')
 
@@ -6,12 +22,12 @@ class RailsURL
   attr_reader :action, :controller, :raw_url, :site_root
 
   def initialize(ctrlr, act, raw, root='')
-    if (ctrlr.nil? || ctrlr.blank?) && (act.nil? || act.blank?) && (raw.nil? || raw.blank?)
+    if (ctrlr.nil? || ctrlr.to_s.blank?) && (act.nil? || act.to_s.blank?) && (raw.nil? || raw.to_s.blank?)
       raise ArgumentError, "Must provide at least one non-null part of URL"
     end
-    @controller = (ctrlr || '').strip.downcase
-    @action = (act || '').strip.downcase
-    @raw_url = (raw || '').strip.downcase
+    @controller = (ctrlr || '').to_s.strip.downcase
+    @action = (act || '').to_s.strip.downcase
+    @raw_url = (raw || '').to_s.strip.downcase
     @site_root = root.to_s.strip.downcase
   end
 
