@@ -9,7 +9,7 @@ Web applications are prevalent and it is important that they be of high quality 
 The project
 ----------
 
-This was my Master's project at the University of Kentucky.  I provide the source code here for anyone who might get some use out of it, either by using my tools to test their web applications, or by seeing how I accomplished some task with Ruby.  See `presentation.pdf`/`presentation.pptx` for an overview of the whole project.  See `paper.docx` for a write-up of the entire project.  The project is divided into two tools, one for applying the QMZ model to a web application, the other for applying the ASM to a web app.
+This was my Master's project at the University of Kentucky.  I provide the source code here for anyone who might get some use out of it, either by using my tools to test their web applications, or by seeing how I accomplished some task with Ruby.  See `presentation.pdf` for an overview of the whole project.  The project is divided into two tools, one for applying the QMZ model to a web application, the other for applying the ASM to a web app.
 
 Usage instructions
 -----------
