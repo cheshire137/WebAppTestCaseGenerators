@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8' />
+    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+    <meta name="description" content="Web App Test Case Generators : Web scraper written in Ruby for generating test cases for the QMZ web application testing model.  Also another tool, again written in Ruby, for generating test cases for the Atomic Section Model web application testing model for a Ruby on Rails web application." />
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Web App Test Case Generators</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/moneypenny/WebAppTestCaseGenerators">Fork Me on GitHub</a>
+
+          <h1 id="project_title">Web App Test Case Generators</h1>
+          <h2 id="project_tagline">Web scraper written in Ruby for generating test cases for the QMZ web application testing model.  Also another tool, again written in Ruby, for generating test cases for the Atomic Section Model web application testing model for a Ruby on Rails web application.</h2>
+
+          <section id="downloads">
+            <a class="zip_download_link" href="https://github.com/moneypenny/WebAppTestCaseGenerators/zipball/master">Download this project as a .zip file</a>
+            <a class="tar_download_link" href="https://github.com/moneypenny/WebAppTestCaseGenerators/tarball/master">Download this project as a tar.gz file</a>
+          </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <h2>Abstract</h2>
+
+<p>Web applications are prevalent and it is important that they be of high quality since businesses, schools, and public services rely upon them.  Unique testing models designed for web applications can be beneficial since web applications differ greatly from desktop applications.  Web applications are accessed via a browser, and a user can manipulate the web application in ways not possible with desktop applications, such as modifying the URI or using the Back button in the browser.  It can take a great deal of time to apply a given testing model to a web application, due to the size of the application as well as the many steps in applying a model.  This project seeks to decrease the time necessary to apply two particular web application testing models:  the <a href="http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.150.1262">Atomic Section Model (Jeff Offutt, Ye Wu)</a> and the <a href="http://www.mendeley.com/research/practical-web-testing-model-web-application-testing-7/">Qian, Miao, Zeng model (Zhongsheng Qian, Huaikou Miao, Hongwei Zeng)</a>.  Two tools were written using the Ruby programming language, one for each model.  The tools take as input the source code of a Ruby on Rails web application, and the URI to a web application written with any framework, respectively.  They produce as output test paths that can be traversed manually to ensure good coverage of the web application, and artifacts that can be further manipulated manually to produce test paths, respectively.  Through the use of these tools, a web application developer can better see how to test his or her application, and can see all the paths through the application that a user might take.</p>
+
+<h2>The project</h2>
+
+<p>This was my Master's project at the University of Kentucky.  I provide the source code here for anyone who might get some use out of it, either by using my tools to test their web applications, or by seeing how I accomplished some task with Ruby.  See <code>presentation.pdf</code> for an overview of the whole project.  The project is divided into two tools, one for applying the QMZ model to a web application, the other for applying the ASM to a web app.</p>
+
+<h2>Usage instructions</h2>
+
+<p>Several libraries are necessary to run either the QMZ or the ASM scripts.  You will need to install <a href="http://treetop.rubyforge.org/">Treetop</a>, <a href="http://nokogiri.org/">Nokogiri</a>, and possibly others I am forgetting.  There is no installer as of yet to install all dependencies for you.  To run the QMZ tool, run <code>ruby qmz/scraper.rb</code> and it will provide more help.  To run the ASM tool against a single ERB file, run <code>ruby asm/single_file_generator.rb</code>.  To run the ASM tool against an entire Rails application, run <code>ruby asm/generator.rb</code>; both will provide further instructions.</p>
+
+<p>Sample commands:</p>
+
+<pre><code>ruby qmz/scraper.rb -u "<a href="http://example.com/">http://example.com/</a>"
+ruby asm/single_file_generator.rb app/views/test/_feedback.html.erb "<a href="http://example.com">http://example.com</a>"
+ruby asm/generator.rb myRailsApp "<a href="http://example.com">http://example.com</a>"
+</code></pre>
+
+<h2>Copyright</h2>
+
+<p>I release the source code of this project under the <a href="http://www.gnu.org/licenses/gpl-3.0.html">GNU General Public License v3</a>.</p>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">Web App Test Case Generators maintained by <a href="https://github.com/moneypenny">moneypenny</a></p>
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>
